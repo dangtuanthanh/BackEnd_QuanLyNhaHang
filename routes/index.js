@@ -9,6 +9,9 @@ const xlsx = require('node-xlsx');
 const moment = require('moment');
 const momenttz = require('moment-timezone');
 router.use(cors());
+router.get("/", function (req, res, next) {
+  res.render("index", { title: "VRes" });
+});
 //tải dữ liệu tài khoản
 router.get("/getAccount", async function (req, res, next) {
   const ss = req.headers.ss;
