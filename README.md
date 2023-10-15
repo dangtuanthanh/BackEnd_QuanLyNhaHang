@@ -1,2 +1,2 @@
 # QuanLyNhaHang
-Ứng dụng quản lý nhà hàng / cafe
+Kho lưu trữ Back-End của Ứng dụng quản lý nhà hàng / cafe
