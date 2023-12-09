@@ -1,0 +1,12 @@
+{
+    "QuyenTruyCap":"Admin",
+    "MatKhau":"123",
+    "TaiKhoan":"admin",
+    "TenNhanVien":"admin",
+    "SoDienThoai":"0123",
+    "DiaChi":"",
+    "GioiTinh":"",
+    "HinhAnh":"",
+    "TinhTrang":"",
+    "NgayVao":"2023-09-25"
+}
