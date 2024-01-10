@@ -8,6 +8,8 @@ var cors = require('cors');//cấu hình CORS
 var indexRouter = require('./routes/index');
 var indexBanVaKhuVuc = require('./routes/BanVaKhuVuc');
 var indexCaLamViec = require('./routes/CaLamViec');
+var indexKhachHang = require('./routes/KhachHang');
+var indexKho = require('./routes/Kho');
 var usersRouter = require('./routes/users');
 
 var app = express();
@@ -32,7 +34,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'img')));//thiết lập cho phép truy cập file static
 
-app.use('/', indexRouter,indexBanVaKhuVuc,indexCaLamViec);
+app.use('/', indexRouter,indexBanVaKhuVuc,indexCaLamViec,indexKhachHang,indexKho);
 app.use('/users', usersRouter);
 
 // catch 404 and forward to error handler

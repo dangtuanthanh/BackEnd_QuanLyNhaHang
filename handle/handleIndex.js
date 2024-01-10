@@ -289,12 +289,12 @@ async function searchAccount(search, searchBy) {
 }
 
 
-//xử lý lấy vai trò theo id
-async function getRoleAccountByID(ID) {
+//xử lý lấy danh sách vai trò theo id
+async function getListRoleByIDAccount(ID) {
   try {
     let result = await pool.request()
       .input('ID', sql.Int, ID)
-      .query('Select IDVaiTro from VaiTroNhanVien WHERE IDNhanVien = @ID');
+      .execute('employee_getAccount_getListRoleByIDAccount');
     return result.recordset;
   } catch (error) {
     throw error;
@@ -343,11 +343,11 @@ async function getRole() {
   }
 }
 //xử lý lấy quyền của vai trò theo id vai trò
-async function getPermissionRoleByID(ID) {
+async function getListPermissionByIDRole(ID) {
   try {
     let result = await pool.request()
       .input('ID', sql.Int, ID)
-      .query('Select IDQuyen from QuyenVaiTro WHERE IDVaiTro = @ID');
+      .execute('employee_getRole_getListPermissionByIDRole');
     return result.recordset;
   } catch (error) {
     throw error;
@@ -383,7 +383,7 @@ async function updateRole(data) {
 //xử lý tải danh sách quyền
 async function getPermission() {
   try {
-    let result = await pool.request().query('Select * from Quyen');
+    let result = await pool.request().execute('employee_getPermission_getPermission');
     return result.recordset;
   } catch (error) {
     throw error;
@@ -504,10 +504,10 @@ module.exports = {
   getRole: getRole,
   getJobPosition: getJobPosition,
   updateAccount: updateAccount,
-  getRoleAccountByID: getRoleAccountByID,
+  getListRoleByIDAccount: getListRoleByIDAccount,
   deleteAccount: deleteAccount,
   undoDeleteAccount: undoDeleteAccount,
-  getPermissionRoleByID: getPermissionRoleByID,
+  getListPermissionByIDRole: getListPermissionByIDRole,
   insertRole: insertRole,
   getPermission: getPermission,
   updateRole: updateRole,

@@ -48,7 +48,6 @@ router.post("/login", function (req, res, next) {
       })
   }
   catch (error) {
-    console.log("Lỗi đăng nhập không thành công: " + error);
     let errorMessage = "Lỗi đăng nhập không thành công.";
     if (error.message) {
       errorMessage = error.message;
@@ -71,7 +70,6 @@ router.post("/session", function (req, res, next) {
         }
       })
   } catch (error) {
-    console.log("Lỗi đăng nhập không thành công: " + error);
     let errorMessage = "Lỗi đăng nhập không thành công.";
     if (error.message) {
       errorMessage = error.message;
@@ -95,7 +93,6 @@ router.get("/logout", async function (req, res, next) {
       );
     }
   } catch (error) {
-    console.log("Lỗi khi tải dữ liệu tài khoản: " + error);
     res.status(500).json({ message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -133,7 +130,6 @@ router.get("/getAccount", async function (req, res, next) {
       let result = await sql.getAccount();
       //kiểm tra chức năng lấy 1 tài khoản
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
-        console.log('vào bước 2');
         const filteredData = result.filter((row) => {
           const searchData = req.query.id;
           const searchBy = 'IDNhanVien';
@@ -144,7 +140,7 @@ router.get("/getAccount", async function (req, res, next) {
           const lowerCaseSearchData = searchData.toLowerCase();
           return lowerCaseColumnData.includes(lowerCaseSearchData);
         })
-        let resultgetRoleAccountByID = await sql.getRoleAccountByID(req.query.id);
+        let resultgetRoleAccountByID = await sql.getListRoleByIDAccount(req.query.id);
         const convertIDRoleAccount = resultgetRoleAccountByID.map(item => {
           return item.IDVaiTro;
         });
@@ -273,7 +269,6 @@ router.get("/getAccount", async function (req, res, next) {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log("Lỗi khi tải dữ liệu tài khoản: " + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -338,7 +333,6 @@ router.post('/insertAccount', newupload.single('HinhAnh'), async function (req, 
         }
       })
       .catch(error => {
-        console.log("Lỗi khi thêm dữ liệu tài khoản: " + error);
         res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
       });
   } else {
@@ -413,7 +407,6 @@ router.put('/updateAccount', newupload.single('HinhAnh'), async function (req, r
         }
       })
       .catch(error => {
-        console.log("Lỗi khi cập nhật tài khoản: " + error);
         res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
       });
   } else {
@@ -433,7 +426,6 @@ router.delete('/deleteAccount', async function (req, res, next) {
           }
         })
         .catch(error => {
-          console.log("Lỗi khi cập nhật tài khoản: " + error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     }
@@ -457,7 +449,6 @@ router.post('/undoDeleteAccount', async function (req, res, next) {
           res.status(200).json({ message: "Undo thành công" });
         })
         .catch(error => {
-          console.log("Lỗi khi undo tài khoản: " + error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else {
@@ -579,8 +570,6 @@ router.post('/importExcelAccount', uploadExcelAccount.single('file'), async (req
 
               }
             } catch (error) {
-              // Xử lý lỗi khi insert_data() trả về lỗi
-              console.log(error);
               return res.status(500).json({ error: 'Đã xảy ra lỗi khi lưu dữ liệu vào cơ sở dữ liệu' });
             }
           }
@@ -702,7 +691,7 @@ router.get("/getRole", async function (req, res, next) {
           return lowerCaseColumnData.includes(lowerCaseSearchData);
         })
         //lấy danh sách quyền ứng với vai trò
-        let resultgetPermissionRoleByID = await sql.getPermissionRoleByID(req.query.id);
+        let resultgetPermissionRoleByID = await sql.getListPermissionByIDRole(req.query.id);
         const convertIDPermissionRole = resultgetPermissionRoleByID.map(item => {
           return item.IDQuyen;
         });
@@ -831,7 +820,6 @@ router.get("/getRole", async function (req, res, next) {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log("Lỗi khi tải dữ liệu tài khoản: " + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -849,7 +837,6 @@ router.post('/insertRole', async function (req, res, next) {
           }
         })
         .catch(error => {
-          console.log("Lỗi khi thêm dữ liệu vai trò: " + error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -870,7 +857,6 @@ router.get("/getPermission", async function (req, res, next) {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log("Lỗi khi tải dữ liệu tài khoản: " + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -879,7 +865,6 @@ router.get("/getPermission", async function (req, res, next) {
 router.put('/updateRole', async function (req, res, next) {
   const ss = req.headers.ss;
   const data = req.body;
-  console.log(req.body.IDQuyen);
   if (await sql.checkSessionAndRole(ss, 'updateRole')) {
     if (req.body.TenVaiTro !== '' || req.body.IDQuyen.length !== 0) {
       sql.updateRole(data)
@@ -889,7 +874,6 @@ router.put('/updateRole', async function (req, res, next) {
           }
         })
         .catch(error => {
-          console.log("Lỗi khi cập nhật tài khoản: " + error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -910,7 +894,6 @@ router.delete('/deleteRole', async function (req, res, next) {
             }
           })
           .catch(error => {
-            console.log("Lỗi khi cập nhật tài khoản: " + error);
             res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
           });
       }
@@ -1079,7 +1062,6 @@ router.get("/getJobPosition", async function (req, res, next) {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log("Lỗi khi tải dữ liệu tài khoản: " + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -1090,11 +1072,9 @@ router.delete('/deleteJobPosition', async function (req, res, next) {
   const IDs = req.body.IDs;
   if (await sql.checkSessionAndRole(ss, 'deleteJobPosition')) {
     if (req.body.IDs) {
-      console.log('IDs',IDs);
       for (const ID of IDs) {
         sql.deleteJobPosition(ID)
           .catch(error => {
-            console.log("Lỗi khi cập nhật tài khoản: " + error);
             res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
           });
       }
@@ -1111,7 +1091,6 @@ router.delete('/deleteJobPosition', async function (req, res, next) {
 router.post('/insertJobPosition', async function (req, res, next) {
   const ss = req.headers.ss;
   const data = req.body;
-  console.log(req.body.TenViTriCongViec);
   if (await sql.checkSessionAndRole(ss, 'insertJobPosition')) {
     if (req.body.TenViTriCongViec !== '') {
       sql.insertJobPosition(data)
@@ -1121,7 +1100,6 @@ router.post('/insertJobPosition', async function (req, res, next) {
           }
         })
         .catch(error => {
-          console.log("Lỗi khi thêm dữ liệu: " + error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -1143,7 +1121,6 @@ router.put('/updateJobPosition', async function (req, res, next) {
           }
         })
         .catch(error => {
-          console.log("Lỗi khi cập nhật tài khoản: " + error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
