@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Cookie</title>
+</head>
+
+<body>
+    <button onclick="dangnhap()">Đăng Nhập</button>
+    <h1>Thông tin đăng nhập:</h1>
+    <p id="ttlogin"></p>
+    <hr>
+    <hr>
+    <hr>
+    <button onclick="kiemtradangnhap()">Kiểm tra phiên đăng nhập</button>
+    <h1>Thông tin đăng nhập:</h1>
+    <p id="ttlogin2"></p>
+    <script>
+        function dangnhap() {
+            const url = 'http://localhost:3000/login'; // Đường dẫn API của bạn
+            const data = {
+                TaiKhoan: 'Admin',
+                MatKhau: 'Admin'
+            };
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => response.json())
+                .then(result => {
+
+                    console.log(result); // Xử lý kết quả trả về từ API
+                    const oneDay = 24 * 60 * 60 * 1000; // Số miligiây trong 1 ngày
+                    document.cookie = `ss=${result.cookieValue};${oneDay};path=/`;
+                    const ttloginElement = document.getElementById('ttlogin');
+                    if (ttloginElement) {
+                        ttloginElement.textContent = result.message;
+                    }
+                })
+                .catch(error => {
+                    console.error('Lỗi:', error);
+                });
+        }
+        function kiemtradangnhap() {
+            const url = 'http://localhost:3000/session'; // Đường dẫn API của bạn
+            const data = {
+                ss: getCookieValue("ss")
+            };
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => response.json())
+                .then(result => {
+                    console.log(result);
+                    const ttloginElement = document.getElementById('ttlogin2');
+                    if (ttloginElement) {
+                        ttloginElement.textContent = result.message;
+                    }
+                })
+                .catch(error => {
+                    console.error('Lỗi:', error);
+                });
+        }
+        function getCookieValue(cookieName) {
+            const name = cookieName + "=";
+            const decodedCookie = decodeURIComponent(document.cookie);
+            const cookieArray = decodedCookie.split(";");
+
+            for (let i = 0; i < cookieArray.length; i++) {
+                let cookie = cookieArray[i];
+                while (cookie.charAt(0) === " ") {
+                    cookie = cookie.substring(1);
+                }
+                if (cookie.indexOf(name) === 0) {
+                    return cookie.substring(name.length, cookie.length);
+                }
+            }
+            return "";
+        }
+    </script>
+
+    <h1>Gửi ảnh xe</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="image" id="anhXeInput" accept="image/*">
+        <button type="submit">Gửi</button>
+    </form>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const input = document.getElementById('anhXeInput');
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const file = input.files[0];
+            if (!file) {
+                console.log('Vui lòng chọn một tệp ảnh');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('image', file);
+            const url = 'https://apple4car.onrender.com/uploadAnhXe/1213'; // Thay đổi tham số truyền sau URL nếu cần thiết
+            fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data); // Xử lý kết quả trả về từ server
+                })
+                .catch(error => {
+                    console.error(error); // Xử lý lỗi nếu có
+                });
+        });
+    </script>
+</body>
+
+</html>

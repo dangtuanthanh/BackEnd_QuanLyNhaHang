@@ -1,0 +1,217 @@
+openapi: 3.0.0
+
+info:
+  title: Quản Lý API 
+  description: Trang quản lý API của ứng dụng quản lý nhà hàng/ cafe VRes
+  version: 1.0.0
+
+paths:
+  /getAccount:
+    get:
+      summary: Tải dữ liệu tài khoản
+      operationId: getAccount
+      parameters:
+        - in: header
+          name: ss
+          description: Mã đăng nhập
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Tải dữ liệu tài khoản thành công
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/definitions/Account'
+        400:
+          description: Lỗi yêu cầu không hợp lệ
+        401:
+          description: Lỗi đăng nhập không hợp lệ hoặc không có quyền truy cập
+        500:
+          description: Lỗi máy chủ
+
+  /login:
+    post:
+      summary: Đăng nhập 'Lấy token đăng nhập'
+      operationId: login
+      parameters:
+        - in: body
+          name: loginData
+          description: Thông tin đăng nhập
+          required: true
+          schema:
+            type: object
+            properties:
+              TaiKhoan:
+                type: string
+                description: Tên đăng nhập
+              MatKhau:
+                type: string
+                description: Mật khẩu
+      responses:
+        200:
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Thành công hay thất bại
+                  message:
+                    type: string
+                    description: Thông báo
+                  cookieValue:
+                    type: string
+                    description: Mã đăng nhập
+        401:
+          description: Tài khoản hoặc mật khẩu không chính xác
+        500:
+          description: Lỗi máy chủ
+  /session:
+    post:
+      summary: Kiểm tra phiên làm việc 'Thực hiện trước khi tải trang'
+      operationId: session
+      parameters:
+        - in: body
+          name: data
+          description: Thông tin đăng nhập
+          required: true
+          schema:
+            type: object
+            properties:
+              ss:
+                type: string
+                description: Mã đăng nhập
+      responses:
+        200:
+          description: Kiểm tra phiên làm việc thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Thành công hay thất bại
+                  nhanvien:
+                    type: array
+                    items:
+                      $ref: '#/definitions/NhanVien'
+                  menu:
+                    type: array
+                    items:
+                      type: string
+        401:
+          description: Lỗi đăng nhập không thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Thành công hay thất bại
+                  message:
+                    type: string
+                    description: Thông báo
+        500:
+          description: Lỗi máy chủ
+
+  /logout:
+    get:
+      summary: Đăng xuất tài khoản
+      responses:
+        '200':
+          description: Đăng Xuất Thành Công
+        '401':
+          description: Đăng Xuất Không Thành Công
+        '500':
+          description: Đã xảy ra lỗi trong quá trình xử lý
+      parameters:
+        - in: header
+          name: ss
+          schema:
+            type: string
+      operationId: logout
+
+definitions:
+  Account:
+    type: object
+    properties:
+      IDNhanVien:
+        type: integer
+        description: ID nhân viên
+      TenNhanVien:
+        type: string
+        description: Tên nhân viên
+      TaiKhoan:
+        type: string
+        description: Tên đăng nhập
+      HinhAnh:
+        type: string
+        description: Hình ảnh
+      IDVaiTro:
+        type: integer
+        description: ID vai trò
+      TenVaiTro:
+        type: string
+        description: Tên vai trò
+  LoginData:
+    type: object
+    properties:
+      TaiKhoan:
+        type: string
+        description: Tên đăng nhập
+        required: true
+      MatKhau:
+        type: string
+        description: Mật khẩu
+        required: true
+  NhanVien:
+    type: object
+    properties:
+      IDNhanVien:
+        type: integer
+        description: ID nhân viên
+      TenNhanVien:
+        type: string
+        description: Tên nhân viên
+      TaiKhoan:
+        type: string
+        description: Tên đăng nhập
+      HinhAnh:
+        type: string
+        description: Hình ảnh
+      IDVaiTro:
+        type: integer
+        description: ID vai trò
+      TenVaiTro:
+        type: string
+        description: Tên vai trò
+  LogoutResponse:
+    type: object
+    properties:
+      success:
+        type: boolean
+      message:
+        type: string
+
+  ErrorObject:
+    type: object
+    properties:
+      message:
+        type: string
+      error:
+        type: object
+
+components:
+  schemas:
+    LogoutResponse:
+      $ref: '#/definitions/LogoutResponse'
+    ErrorObject:
+      $ref: '#/definitions/ErrorObject'
