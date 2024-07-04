@@ -52,7 +52,7 @@ router.get("/getInvoice", async function (req, res, next) {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   try {
-    if (await sql.checkSessionAndRole(ss, 'getInvoice')) {
+    // if (await sql.checkSessionAndRole(ss, 'getInvoice')) {
       let result = await sql.getInvoice();
       //xử lý định dạng ngày về dd/mm/yyyy
       result = result.map(item => {
@@ -200,9 +200,9 @@ router.get("/getInvoice", async function (req, res, next) {
           DateCurrent: formattedDate,
         });
       }
-    } else {
-      res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
-    }
+    // } else {
+    //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+    // }
   } catch (error) {
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
@@ -211,7 +211,7 @@ router.get("/getInvoice", async function (req, res, next) {
 // Thêm hoá đơn
 router.post('/insertInvoice', async function (req, res, next) {
   const ss = req.headers.ss;
-  if (await sql.checkSessionAndRole(ss, 'insertInvoice')) {
+  // if (await sql.checkSessionAndRole(ss, 'insertInvoice')) {
     if (req.body.IDNhanVien && req.body.DanhSach.length > 0) {
       //kiểm tra có ghi chú hay không
       var ghiChu = null;
@@ -289,14 +289,14 @@ router.post('/insertInvoice', async function (req, res, next) {
         res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
       }
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác !" });
-  } else {
-    res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập !" });
-  }
+  // } else {
+  //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập !" });
+  // }
 });
 //Cập nhật hoá đơn
 router.put('/updateInvoice', async function (req, res, next) {
   const ss = req.headers.ss;
-  if (await sql.checkSessionAndRole(ss, 'updateInvoice')) {
+  // if (await sql.checkSessionAndRole(ss, 'updateInvoice')) {
     if (req.body.IDHoaDon && req.body.IDNhanVien && req.body.DanhSach.length > 0) {
       //kiểm tra có ghi chú hay không
       var ghiChu = null;
@@ -377,9 +377,9 @@ router.put('/updateInvoice', async function (req, res, next) {
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác !" });
-  } else {
-    res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
-  }
+  // } else {
+  //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+  // }
 });
 
 //Xoá hoá đơn
@@ -451,7 +451,7 @@ const newupload = multer({ storage: storage });
 router.put('/updatePicturePayment', newupload.single('HinhAnh'), async function (req, res, next) {
   const ss = req.headers.ss;
   var HinhAnh = null
-  if (await sql.checkSessionAndRole(ss, 'updatePicturePayment')) {
+  if (await sql.checkSessionAndRole(ss, 'updateSystem')) {
     if (req.file) {
       imagePath = req.file.path
       const domain = req.headers.host;
@@ -472,5 +472,49 @@ router.put('/updatePicturePayment', newupload.single('HinhAnh'), async function 
     res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
   }
 });
+//Cập nhật phần trăm điểm khách hàng
+router.put('/updatePerPointCustomert', async function (req, res, next) {
+  const ss = req.headers.ss;
+  if (await sql.checkSessionAndRole(ss, 'updateSystem')) {
+    if (req.body.TiLe) {
+      sql.updatePerPointCustomert(req.body.TiLe)
+        .then(() => {
+          res.status(200).json({ success: true, message: "Cập Nhật Dữ Liệu Thành Công!" });
+        })
+        .catch(error => {
+          console.log("error", error);
+          res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
+        });
+    } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác !" });
+  } else {
+    res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+  }
+});
+router.get("/getPerPointCustomert", async function (req, res, next) {
+  const ss = req.headers.ss;
+  if (await sql.checkSessionAndRole(ss, 'updateSystem')) {
+    sql.getPerPointCustomert()
+      .then(result => {
+        res.status(200).json(result);
+      })
+      .catch(error => {
+        console.log('error', error)
+        res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
+      });
+  }
+  else {
+    res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+  }
+})
 
+// router.get("/checkStatusTable", async function (req, res, next) {
+//   sql.getPerPointCustomert()
+//     .then(result => {
+//       res.status(200).json(result);
+//     })
+//     .catch(error => {
+//       console.log('error', error)
+//       res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
+//     });
+// })
 module.exports = router;

@@ -54,7 +54,7 @@ router.get("/getTypeProduct", async function (req, res, next) {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   try {
-    if (await sql.checkSessionAndRole(ss, 'getTypeProduct')) {
+    // if (await sql.checkSessionAndRole(ss, 'getTypeProduct')) {
       let result = await sql.getTypeProduct();
       //kiểm tra chức năng lấy 1 
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
@@ -176,9 +176,9 @@ router.get("/getTypeProduct", async function (req, res, next) {
           data,//dữ liệu trên trang hiện tại
         });
       }
-    } else {
-      res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
-    }
+    // } else {
+    //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+    // }
   } catch (error) {
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
@@ -270,7 +270,7 @@ router.get("/getProduct", async function (req, res, next) {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   try {
-    if (await sql.checkSessionAndRole(ss, 'getProduct')) {
+    // if (await sql.checkSessionAndRole(ss, 'getProduct')) {
       let result = await sql.getProduct();
       //kiểm tra chức năng lấy 1 
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
@@ -419,9 +419,9 @@ router.get("/getProduct", async function (req, res, next) {
           data,//dữ liệu trên trang hiện tại
         });
       }
-    } else {
-      res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
-    }
+    // } else {
+    //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+    // }
   } catch (error) {
     console.log('error', error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });

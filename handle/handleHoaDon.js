@@ -304,6 +304,25 @@ async function updatePicturePayment(HinhAnh) {
     throw error;
   }
 }
+//Cập nhật phần trăm điểm khách hàng
+async function updatePerPointCustomert(TiLe) {
+  try {
+    await pool.request()
+      .input('TiLe', sql.Int, TiLe)
+      .execute('invoice_updatePerPointCustomert');
+  } catch (error) {
+    throw error;
+  }
+}
+//xử lý tải phần trăm điểm khách hàng
+async function getPerPointCustomert() {
+  try {
+    const result = await pool.request().query('EXEC invoice_getPerPointCustomert');
+    return result.recordset;
+  } catch (error) {
+    throw error;
+  }
+}
 module.exports = {
   checkSessionAndRole: checkSessionAndRole,
   getInvoice: getInvoice,
@@ -313,5 +332,7 @@ module.exports = {
   getListInvoiceDetailsByID: getListInvoiceDetailsByID,
   updateStatusTable: updateStatusTable,
   getPicturePayment: getPicturePayment,
-  updatePicturePayment: updatePicturePayment
+  updatePicturePayment: updatePicturePayment,
+  updatePerPointCustomert:updatePerPointCustomert,
+  getPerPointCustomert:getPerPointCustomert
 };

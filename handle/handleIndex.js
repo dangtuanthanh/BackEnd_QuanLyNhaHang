@@ -141,7 +141,8 @@ async function session(MaDangNhap) {
           const yyyy = date.getFullYear();
           const mm = date.getMonth() + 1;
           const dd = date.getDate();
-          const currentDate = `${yyyy}/${mm < 10 ? `0${mm}` : mm}/${dd < 10 ? `0${dd}` : dd}`;
+          const currentDate = `${yyyy}-${mm < 10 ? `0${mm}` : mm}-${dd < 10 ? `0${dd}` : dd}`;
+
           const resultChotCa = await pool.request()
             .input('IDNhanVien', sql.Int, result.recordset[0].IDNhanVien)
             .input('NgayLamViec', sql.DateTime, currentDate)

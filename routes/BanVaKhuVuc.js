@@ -53,7 +53,7 @@ router.get("/getArea", async function (req, res, next) {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   try {
-    if (await sql.checkSessionAndRole(ss, 'getArea')) {
+    // if (await sql.checkSessionAndRole(ss, 'getArea')) {
       let result = await sql.getArea();
       //kiểm tra chức năng lấy 1 
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
@@ -178,9 +178,9 @@ router.get("/getArea", async function (req, res, next) {
           data,//dữ liệu trên trang hiện tại
         });
       }
-    } else {
-      res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
-    }
+    // } else {
+    //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+    // }
   } catch (error) {
     console.log("Lỗi khi tải dữ liệu tài khoản: " + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
@@ -277,7 +277,7 @@ router.get("/getTable", async function (req, res, next) {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   try {
-    if (await sql.checkSessionAndRole(ss, 'getTable')) {
+    // if (await sql.checkSessionAndRole(ss, 'getTable')) {
       let result = await sql.getTable();
       //kiểm tra chức năng lấy 1 
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
@@ -402,9 +402,9 @@ router.get("/getTable", async function (req, res, next) {
           data,//dữ liệu trên trang hiện tại
         });
       }
-    } else {
-      res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
-    }
+    // } else {
+    //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+    // }
   } catch (error) {
     console.log("Lỗi khi tải dữ liệu tài khoản: " + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
