@@ -4,10 +4,12 @@ const sql = require('mssql');
 //Kiểm tra phiên và quyền đăng nhập
 async function checkSessionAndRole(ss, permission) {
   try {
+    const NgayHomNay = new Date();
     let result = await pool
       .request()
       .input("MaDangNhap", sql.NVarChar, ss)
-      .query('EXEC loginAndPermission_checkSessionAndRole_getInfoByMaDangNhap @MaDangNhap');
+      .input('NgayHomNay', sql.DateTime,NgayHomNay)
+      .execute('loginAndPermission_checkSessionAndRole_getInfoByMaDangNhap');
     if (result.recordset.length === 0) {
       console.log("Không tìm thấy người dùng với mã đăng nhập:", ss);
       return false;
@@ -26,11 +28,9 @@ async function checkSessionAndRole(ss, permission) {
         const permissions = resultVaiTro.recordset.map((row) => row.TenQuyen);;
         for (const p of permissions) {
           if (p === permission) {
-            console.log('Có quyền truy cập');
             return true; // Nếu tìm thấy quyền khớp với biến permission, trả về true
           }
         }
-        console.log('Không có quyền truy cập');
         return false; // Nếu không tìm thấy quyền nào khớp với biến permission, trả về false
       }
     }
@@ -39,14 +39,27 @@ async function checkSessionAndRole(ss, permission) {
     throw error;
   }
 }
+//lấy mã IDDoiTac
+async function getIDDoiTac(ss) {
+  try {
+    let result = await pool.request()
+      .input("MaDangNhap", sql.NVarChar, ss)
+      .query('EXEC loginAndPermission_checkSessionAndRole_getIDDoiTac @MaDangNhap');
+    return result.recordset[0].IDDoiTac;
+  } catch (error) {
+    console.error("Lỗi khi lấy IDDoiTac", error);
+    throw error;
+  }
+}
 
 /*  Quản lý bếp */
 //xử lý tải danh sách món ăn đang trong trạng thái báo bếp
-async function getListProductsByStatus(ID, ID2) {
+async function getListProductsByStatus(IDDoiTac, ID, ID2) {
   try {
     let result = await pool.request()
       .input('ID', sql.Int, ID)
       .input('ID2', sql.Int, ID2)
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .execute('kitchen_getProduct_getListProductsByStatus')
     return result.recordset;
   } catch (error) {
@@ -54,14 +67,13 @@ async function getListProductsByStatus(ID, ID2) {
   }
 }
 //cập nhật trạng thái sản phẩm trong bếp
-async function updateStatusProduct(data) {
+async function updateStatusProduct(IDDoiTac, data) {
   try {
     //kiểm tra trạng thái :
-    console.log('data.IDTrangThai', data.IDTrangThai);
-
     //1.1 kiểm tra sản phẩm là thành phẩm hay chế biến
     const resultCheckTypeProduct = await pool.request()
       .input('ID', sql.Int, data.IDSanPham)
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .execute('kitchen_updateStatusProduct_checkTypeProduct');
     const checkTypeProduct = resultCheckTypeProduct.recordset[0][''];
     if (data.IDTrangThai == 2) {//chế biến xong, nếu là sản phẩm chế biến thì trừ kho
@@ -70,10 +82,11 @@ async function updateStatusProduct(data) {
         //lấy danh sách định mức thông qua bảng định mức
         const resultGetListNormDetailsByIDProduct = await pool.request()
           .input('ID', sql.Int, data.IDSanPham)
+          .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
           .execute('menu_getProduct_getListNormDetailsByIDProduct');
         const ListNormDetails = resultGetListNormDetailsByIDProduct.recordset
         for (const item of ListNormDetails) {
-          await updateNumberInventory(item, data.SoLuong)
+          await updateNumberInventory(IDDoiTac, item, data.SoLuong)
         }
         // 2. cập nhật trạng thái thành 2: đã nấu xong
         await pool.request()
@@ -124,30 +137,52 @@ async function updateStatusProduct(data) {
   }
 }
 //hàm trừ nguyên liệu
-async function updateNumberInventory(item, SoLuong) {
+async function updateNumberInventory(IDDoiTac, item, SoLuong) {
   try {
     //tính toán lại số lượng tồn
     //lấy số lượng tồn trong kho
-    const resultInventory = await pool.request().query(`select SoLuongTon FROM NguyenLieu WHERE IDNguyenLieu = ${item.IDNguyenLieu}`);
+    const resultInventory = await pool.request()
+      .input('IDNguyenLieu', sql.Int, item.IDNguyenLieu)
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
+      .query(`select SoLuongTon FROM NguyenLieu WHERE IDNguyenLieu = @IDNguyenLieu AND IDDoiTac = @IDDoiTac`);
     const SoLuongTon = resultInventory.recordset[0]['SoLuongTon']
 
     // kiểm tra đơn vị tính có trùng với đơn vị tính mặc định không
-    const resultCheckEqualUnit = await checkEqualUnit(item.IDDonViTinh, item.IDNguyenLieu, true)
-    console.log('resultCheckEqualUnit', resultCheckEqualUnit);
+    const resultCheckEqualUnit = await checkEqualUnit(IDDoiTac, item.IDDonViTinh, item.IDNguyenLieu, true)
     if (resultCheckEqualUnit) { //trùng với đơn vị tính mặc định
       //cập nhật số lượng tồn
-      await pool.request().query(`UPDATE NguyenLieu
-      SET SoLuongTon = ${SoLuongTon - ((item.KhoiLuong + item.TiLeSai) * SoLuong)}
-      WHERE IDNguyenLieu = ${item.IDNguyenLieu}`);
+      await pool.request()
+        .input('SoLuongTon', sql.Int, SoLuongTon - ((item.KhoiLuong + item.TiLeSai) * SoLuong))
+        .input('IDNguyenLieu', sql.Int, item.IDNguyenLieu)
+        .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
+        .query(`
+    UPDATE NguyenLieu
+    SET SoLuongTon = @SoLuongTon
+    WHERE IDNguyenLieu = @IDNguyenLieu
+    AND IDDoiTac = @IDDoiTac
+  `);
+
+      // await pool.request().query(`UPDATE NguyenLieu
+      // SET SoLuongTon = ${SoLuongTon - ((item.KhoiLuong + item.TiLeSai) * SoLuong)}
+      // WHERE IDNguyenLieu = ${item.IDNguyenLieu}`);
     } else {//khác với đơn vị tính mặc định
       //chuyển về cùng đơn vị tính
-      const Convert = await ConvertUnit(item.KhoiLuong, item.IDDonViTinh, item.IDNguyenLieu, true)
-      const Convert2 = await ConvertUnit(item.TiLeSai, item.IDDonViTinh, item.IDNguyenLieu, true)
-      console.log('ConvertKhoiLuong', Convert);
+      const Convert = await ConvertUnit(IDDoiTac, item.KhoiLuong, item.IDDonViTinh, item.IDNguyenLieu, true)
+      const Convert2 = await ConvertUnit(IDDoiTac, item.TiLeSai, item.IDDonViTinh, item.IDNguyenLieu, true)
       //cập nhật số lượng tồn
-      await pool.request().query(`UPDATE NguyenLieu
-      SET SoLuongTon =${SoLuongTon - ((Convert + Convert2) * SoLuong)}
-      WHERE IDNguyenLieu = ${item.IDNguyenLieu}`);
+      await pool.request()
+        .input('SoLuongTon', sql.Int, SoLuongTon - ((Convert + Convert2) * SoLuong))
+        .input('IDNguyenLieu', sql.Int, item.IDNguyenLieu)
+        .input('IDDoiTac', sql.UniqueIdentifier, IDDoiTac)
+        .query(`
+    UPDATE NguyenLieu
+    SET SoLuongTon = @SoLuongTon
+    WHERE IDNguyenLieu = @IDNguyenLieu AND IDDoiTac = @IDDoiTac
+  `);
+
+      // await pool.request().query(`UPDATE NguyenLieu
+      // SET SoLuongTon =${SoLuongTon - ((Convert + Convert2) * SoLuong)}
+      // WHERE IDNguyenLieu = ${item.IDNguyenLieu}`);
     }
 
   } catch (error) {
@@ -156,12 +191,13 @@ async function updateNumberInventory(item, SoLuong) {
 }
 
 //hàm kiểm tra dvt có trùng với dvt gốc không
-async function checkEqualUnit(IDDonViTinh, IDNguyenLieuorIDSanPham, isNguyenLieu) {
+async function checkEqualUnit(IDDoiTac, IDDonViTinh, IDNguyenLieuorIDSanPham, isNguyenLieu) {
   try {
     const result = await pool.request()
       .input('IDDonViTinh', sql.Int, IDDonViTinh)
       .input('IDNguyenLieuorIDSanPham', sql.Int, IDNguyenLieuorIDSanPham)
       .input('isNguyenLieu', sql.Bit, isNguyenLieu)
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .execute('inventory_updateReceipt_checkEqualUnit');
     return result.recordset[0][''];
   } catch (error) {
@@ -169,18 +205,20 @@ async function checkEqualUnit(IDDonViTinh, IDNguyenLieuorIDSanPham, isNguyenLieu
   }
 }
 //hàm chuyển đổi đơn vị tính
-async function ConvertUnit(SoLuongNhap, IDDonViTinh, IDNguyenLieuorIDSanPham, isNguyenLieu) {
+async function ConvertUnit(IDDoiTac, SoLuongNhap, IDDonViTinh, IDNguyenLieuorIDSanPham, isNguyenLieu) {
   try {
     // lấy ID ĐVT mặc định
     resultGetUnitDefault = await pool.request()
       .input('IDNguyenLieuorIDSanPham', sql.Int, IDNguyenLieuorIDSanPham)
       .input('isNguyenLieu', sql.Bit, isNguyenLieu)
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .execute('inventory_updateReceipt_getUnitDefault');
     IDDonViTinhMacDinh = resultGetUnitDefault.recordset[0][''];
     //lấy hệ số chuyển đổi
     resultGetConversionRatio = await pool.request()
       .input('IDDonViCu', sql.Int, IDDonViTinh)
       .input('IDDonViMoi', sql.Int, IDDonViTinhMacDinh)
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .execute('inventory_updateReceipt_getConversionRatio');
     const heSoChuyenDoi = resultGetConversionRatio.recordset[0][''];
     // convert về ĐVT mặc định
@@ -193,6 +231,7 @@ async function ConvertUnit(SoLuongNhap, IDDonViTinh, IDNguyenLieuorIDSanPham, is
 
 module.exports = {
   checkSessionAndRole: checkSessionAndRole,
+  getIDDoiTac: getIDDoiTac,
   getListProductsByStatus: getListProductsByStatus,
   updateStatusProduct: updateStatusProduct
 };

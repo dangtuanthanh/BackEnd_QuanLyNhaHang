@@ -4,10 +4,12 @@ const sql = require('mssql');
 //Kiểm tra phiên và quyền đăng nhập
 async function checkSessionAndRole(ss, permission) {
   try {
+    const NgayHomNay = new Date();
     let result = await pool
       .request()
       .input("MaDangNhap", sql.NVarChar, ss)
-      .query('EXEC loginAndPermission_checkSessionAndRole_getInfoByMaDangNhap @MaDangNhap');
+      .input('NgayHomNay', sql.DateTime,NgayHomNay)
+      .execute('loginAndPermission_checkSessionAndRole_getInfoByMaDangNhap');
     if (result.recordset.length === 0) {
       return false;
     } else {
@@ -34,6 +36,18 @@ async function checkSessionAndRole(ss, permission) {
     throw error;
   }
 }
+//lấy mã IDDoiTac
+async function getIDDoiTac(ss) {
+  try {
+    let result = await pool.request()
+      .input("MaDangNhap", sql.NVarChar, ss)
+      .query('EXEC loginAndPermission_checkSessionAndRole_getIDDoiTac @MaDangNhap');
+    return result.recordset[0].IDDoiTac;
+  } catch (error) {
+    console.error("Lỗi khi lấy IDDoiTac", error);
+    throw error;
+  }
+}
 //xử lý đăng xuất
 async function logout(MaDangNhap) {
   try {
@@ -57,29 +71,32 @@ async function logout(MaDangNhap) {
 }
 
 //xử lý tải danh sách ca làm việc
-async function getShifts() {
+async function getShifts(IDDoiTac) {
   try {
-    let result = await pool.request().query('EXEC shifts_getShifts_getShifts');
+    let result = await pool.request()
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
+      .execute('shifts_getShifts_getShifts');
     return result.recordset;
   } catch (error) {
     throw error;
   }
 }
 //Hàm xoá ca làm việc
-async function deleteShifts(ID) {
+async function deleteShifts(IDDoiTac, ID) {
   try {
     await pool.request()
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .input('IDCaLamViec', sql.Int, ID)
       .execute('shifts_deleteShifts_deleteShifts');
   } catch (error) {
     throw error;
   }
 }
-
 //xử lý thêm ca làm việc
-async function insertShifts(data) {
+async function insertShifts(IDDoiTac, data) {
   try {
     await pool.request()
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .input('TenCaLamViec', sql.NVarChar, data.TenCaLamViec)
       .input('GioBatDau', sql.VarChar, data.GioBatDau)
       .input('GioKetThuc', sql.VarChar, data.GioKetThuc)
@@ -89,11 +106,11 @@ async function insertShifts(data) {
     throw error;
   }
 }
-
 //xử lý cập nhật ca làm việc
-async function updateShifts(data) {
+async function updateShifts(IDDoiTac, data) {
   try {
     await pool.request()
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .input('IDCaLamViec', sql.Int, data.IDCaLamViec)
       .input('TenCaLamViec', sql.NVarChar, data.TenCaLamViec)
       .input('GioBatDau', sql.VarChar, data.GioBatDau)
@@ -106,17 +123,18 @@ async function updateShifts(data) {
 }
 
 //xử lý tải danh sách chốt ca
-async function getCloseShifts() {
+async function getCloseShifts(IDDoiTac) {
   try {
-    let result = await pool.request().query('EXEC shifts_getCloseShifts_getCloseShifts');
+    let result = await pool.request()
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
+      .execute('shifts_getCloseShifts_getCloseShifts');
     return result.recordset;
   } catch (error) {
     throw error;
   }
 }
-
 //xử lý tải danh sách ca phù hợp với giờ hiện tại
-async function getMatchShifts() {
+async function getMatchShifts(IDDoiTac) {
   try {
     //Lấy giờ hiện tại
     let currentTime = new Date();
@@ -128,7 +146,7 @@ async function getMatchShifts() {
     //Khai báo mảng lưu kết quả
     let shiftArray = [];
     //Gọi hàm lấy danh sách ca làm việc
-    let shifts = await getShifts();
+    let shifts = await getShifts(IDDoiTac);
     //Lặp qua từng record trong danh sách ca làm việc  
     shifts.forEach(shift => {
       //Chuyển giờ sang số để so sánh 
@@ -136,6 +154,7 @@ async function getMatchShifts() {
       let end = parseInt(shift.GioKetThuc.replace(':', ''));
       //Kiểm tra giờ hiện tại có trong khoảng thời gian ca không
       if (currentTime >= start && currentTime <= end) {
+        console.log('nằm trong');
         //Nếu có, thêm vào mảng kết quả
         shiftArray.push({
           IDCaLamViec: shift.IDCaLamViec,
@@ -151,13 +170,14 @@ async function getMatchShifts() {
 }
 
 //xử lý thêm chốt ca mới
-async function insertCloseShifts(data) {
+async function insertCloseShifts(IDDoiTac, data) {
   try {
     var ghiChu = data.GhiChu
     if (typeof data.GhiChu === 'undefined') {
       ghiChu = null
     }
     await pool.request()
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .input('IDCaLamViec', sql.Int, data.IDCaLamViec)
       .input('IDNhanVien', sql.Int, data.IDNhanVien)
       .input('NgayLamViec', sql.DateTime, data.NgayLamViec)
@@ -174,13 +194,14 @@ async function insertCloseShifts(data) {
 }
 
 //xử lý Cập nhật chốt ca
-async function updateCloseShifts(data) {
+async function updateCloseShifts(IDDoiTac, data) {
   try {
     var ghiChu = data.GhiChu
     if (typeof data.GhiChu === 'undefined') {
       ghiChu = null
     }
     await pool.request()
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .input('IDChotCa', sql.Int, data.IDChotCa)
       .input('IDCaLamViec', sql.Int, data.IDCaLamViec)
       .input('IDNhanVien', sql.Int, data.IDNhanVien)
@@ -197,9 +218,10 @@ async function updateCloseShifts(data) {
   }
 }
 //Hàm xoá chốt ca
-async function deleteCloseShifts(ID) {
+async function deleteCloseShifts(IDDoiTac, ID) {
   try {
     await pool.request()
+      .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .input('ID', sql.Int, ID)
       .execute('shifts_deleteCloseShifts_deleteCloseShifts');
   } catch (error) {
@@ -208,6 +230,7 @@ async function deleteCloseShifts(ID) {
 }
 module.exports = {
   checkSessionAndRole: checkSessionAndRole,
+  getIDDoiTac: getIDDoiTac,
   getShifts: getShifts,
   deleteShifts: deleteShifts,
   insertShifts: insertShifts,
@@ -216,6 +239,6 @@ module.exports = {
   getMatchShifts: getMatchShifts,
   insertCloseShifts: insertCloseShifts,
   logout: logout,
-  updateCloseShifts:updateCloseShifts,
-  deleteCloseShifts:deleteCloseShifts
+  updateCloseShifts: updateCloseShifts,
+  deleteCloseShifts: deleteCloseShifts
 };

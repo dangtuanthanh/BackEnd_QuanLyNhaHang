@@ -32,29 +32,32 @@ router.get("/BanVaKhuVuc", function (req, res, next) {
 router.get("/getArea", async function (req, res, next) {
   //xử lý dữ liệu vào
   const ss = req.headers.ss;
-  const currentPage = parseInt(req.query.page) || 1;//trang hiện tại
-  var itemsPerPage = parseInt(req.query.limit) || 10;//số hàng trên mỗi trang
-  var sortBy = "IDKhuVuc"//giá trị mặc định cho cột sắp xếp
-  var sortOrder = "asc"//giá trị mặc định cho thứ tự sắp xếp
-  var searchExact = false//giá trị mặc định cho chế độ sắp xếp
-  if (typeof req.query.sortBy !== 'undefined') {
-    sortBy = req.query.sortBy
-  }
-  if (typeof req.query.sortOrder !== 'undefined') {
-    sortOrder = req.query.sortOrder
-  }
-  if (typeof req.query.searchExact !== 'undefined') {
-    if (req.query.searchExact === 'true') searchExact = true;
-    else searchExact = false
+  const iddoitac = req.headers.iddoitac;
+  if (req.headers.iddoitac) {
+    const currentPage = parseInt(req.query.page) || 1;//trang hiện tại
+    var itemsPerPage = parseInt(req.query.limit) || 10;//số hàng trên mỗi trang
+    var sortBy = "IDKhuVuc"//giá trị mặc định cho cột sắp xếp
+    var sortOrder = "asc"//giá trị mặc định cho thứ tự sắp xếp
+    var searchExact = false//giá trị mặc định cho chế độ sắp xếp
+    if (typeof req.query.sortBy !== 'undefined') {
+      sortBy = req.query.sortBy
+    }
+    if (typeof req.query.sortOrder !== 'undefined') {
+      sortOrder = req.query.sortOrder
+    }
+    if (typeof req.query.searchExact !== 'undefined') {
+      if (req.query.searchExact === 'true') searchExact = true;
+      else searchExact = false
 
-  }
-  //xử lý yêu cầu
-  // Tính toán vị trí bắt đầu và kết thúc của mục trên trang hiện tại
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  try {
-    if (await sql.checkSessionAndRole(ss, 'getArea')) {
-      let result = await sql.getArea();
+    }
+    //xử lý yêu cầu
+    // Tính toán vị trí bắt đầu và kết thúc của mục trên trang hiện tại
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    try {
+      // if (await sql.checkSessionAndRole(ss, 'getArea')) {
+
+      let result = await sql.getArea(iddoitac);
       //kiểm tra chức năng lấy 1 
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
         const filteredData = result.filter((row) => {
@@ -178,13 +181,15 @@ router.get("/getArea", async function (req, res, next) {
           data,//dữ liệu trên trang hiện tại
         });
       }
-    } else {
-      res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+      // } else {
+      //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+      // }
+    } catch (error) {
+      console.log('error', error);
+      res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
     }
-  } catch (error) {
-    console.log("Lỗi khi tải dữ liệu tài khoản: " + error);
-    res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
+  else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
 });
 //Xoá khu vực
 router.delete('/deleteArea', async function (req, res, next) {
@@ -192,11 +197,11 @@ router.delete('/deleteArea', async function (req, res, next) {
   const IDs = req.body.IDs;
   if (await sql.checkSessionAndRole(ss, 'deleteArea')) {
     if (req.body.IDs && req.body.IDs.length > 0) {
-      console.log('IDs', IDs);
+      const IDDoiTac = await sql.getIDDoiTac(ss)
       for (const ID of IDs) {
-        sql.deleteArea(ID)
+        sql.deleteArea(IDDoiTac, ID)
           .catch(error => {
-            console.log("Lỗi khi cập nhật dữ liệu: " + error);
+            console.log('error', error);
             res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
           });
       }
@@ -213,15 +218,16 @@ router.post('/insertArea', async function (req, res, next) {
   const ss = req.headers.ss;
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'insertArea')) {
-    if (req.body.TenViTriCongViec !== '') {
-      sql.insertArea(data)
+    if (req.body.TenKhuVuc) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.insertArea(IDDoiTac, data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Thêm Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
-          console.log("Lỗi khi thêm dữ liệu: " + error);
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -234,15 +240,16 @@ router.put('/updateArea', async function (req, res, next) {
   const ss = req.headers.ss;
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'updateArea')) {
-    if (req.body.TenViTriCongViec !== '') {
-      sql.updateArea(data)
+    if (req.body.TenKhuVuc && req.body.IDKhuVuc) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.updateArea(IDDoiTac, data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Sửa Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
-          console.log("Lỗi khi cập nhật tài khoản: " + error);
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -256,29 +263,31 @@ router.put('/updateArea', async function (req, res, next) {
 router.get("/getTable", async function (req, res, next) {
   //xử lý dữ liệu vào
   const ss = req.headers.ss;
-  const currentPage = parseInt(req.query.page) || 1;//trang hiện tại
-  var itemsPerPage = parseInt(req.query.limit) || 10;//số hàng trên mỗi trang
-  var sortBy = "IDBan"//giá trị mặc định cho cột sắp xếp
-  var sortOrder = "asc"//giá trị mặc định cho thứ tự sắp xếp
-  var searchExact = false//giá trị mặc định cho chế độ sắp xếp
-  if (typeof req.query.sortBy !== 'undefined') {
-    sortBy = req.query.sortBy
-  }
-  if (typeof req.query.sortOrder !== 'undefined') {
-    sortOrder = req.query.sortOrder
-  }
-  if (typeof req.query.searchExact !== 'undefined') {
-    if (req.query.searchExact === 'true') searchExact = true;
-    else searchExact = false
+  const iddoitac = req.headers.iddoitac;
+  if (req.headers.iddoitac) {
+    const currentPage = parseInt(req.query.page) || 1;//trang hiện tại
+    var itemsPerPage = parseInt(req.query.limit) || 10;//số hàng trên mỗi trang
+    var sortBy = "IDBan"//giá trị mặc định cho cột sắp xếp
+    var sortOrder = "asc"//giá trị mặc định cho thứ tự sắp xếp
+    var searchExact = false//giá trị mặc định cho chế độ sắp xếp
+    if (typeof req.query.sortBy !== 'undefined') {
+      sortBy = req.query.sortBy
+    }
+    if (typeof req.query.sortOrder !== 'undefined') {
+      sortOrder = req.query.sortOrder
+    }
+    if (typeof req.query.searchExact !== 'undefined') {
+      if (req.query.searchExact === 'true') searchExact = true;
+      else searchExact = false
 
-  }
-  //xử lý yêu cầu
-  // Tính toán vị trí bắt đầu và kết thúc của mục trên trang hiện tại
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  try {
-    if (await sql.checkSessionAndRole(ss, 'getTable')) {
-      let result = await sql.getTable();
+    }
+    //xử lý yêu cầu
+    // Tính toán vị trí bắt đầu và kết thúc của mục trên trang hiện tại
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    try {
+      // if (await sql.checkSessionAndRole(ss, 'getTable')) {
+      let result = await sql.getTable(iddoitac);
       //kiểm tra chức năng lấy 1 
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
         const filteredData = result.filter((row) => {
@@ -350,9 +359,26 @@ router.get("/getTable", async function (req, res, next) {
           // Lưu kết quả lọc vào biến result
           result = filteredData;
         }
-        //sắp xếp 
+        // Sắp xếp
         result.sort((a, b) => {
-          if (sortBy === 'TenBan' || sortBy === 'TrangThai' || sortBy === 'TenKhuVuc') {
+          if (sortBy === 'TenBan') {
+            // Tách số ra khỏi tên bàn và sắp xếp theo số nếu có
+            const extractNumber = (str) => {
+              const match = str.match(/\d+/);
+              return match ? parseInt(match[0], 10) : Infinity; // Nếu không có số thì đặt số lớn nhất
+            };
+
+            const numA = extractNumber(a.TenBan);
+            const numB = extractNumber(b.TenBan);
+
+            if (numA !== numB) {
+              return sortOrder === 'asc' ? numA - numB : numB - numA;
+            }
+
+            // Nếu số giống nhau hoặc không có số thì sắp xếp theo tên
+            const comparison = a.TenBan.localeCompare(b.TenBan, 'vi', { sensitivity: 'base' });
+            return sortOrder === 'asc' ? comparison : -comparison;
+          } else if (sortBy === 'TrangThai' || sortBy === 'TenKhuVuc') {
             // Xử lý sắp xếp cột có tiếng Việt
             const valA = a[sortBy] || ''; // Giá trị của a[sortBy] hoặc chuỗi rỗng nếu null
             const valB = b[sortBy] || ''; // Giá trị của b[sortBy] hoặc chuỗi rỗng nếu null
@@ -367,7 +393,7 @@ router.get("/getTable", async function (req, res, next) {
             }
             const comparison = valA.localeCompare(valB, 'vi', { sensitivity: 'base' });
             return sortOrder === 'asc' ? comparison : -comparison;
-          } else {//cột không có tiếng Việt (chỉ có số và chữ tiếng Anh)
+          } else { // Cột không có tiếng Việt (chỉ có số và chữ tiếng Anh)
             if (a[sortBy] === null && b[sortBy] === null) {
               return 0;
             }
@@ -386,6 +412,7 @@ router.get("/getTable", async function (req, res, next) {
             return 0;
           }
         });
+
         //sắp xếp trước, ngắt trang sau
         const data = result.slice(startIndex, endIndex);// Lấy dữ liệu cho trang hiện tại
         if (result.length <= itemsPerPage) {
@@ -402,13 +429,15 @@ router.get("/getTable", async function (req, res, next) {
           data,//dữ liệu trên trang hiện tại
         });
       }
-    } else {
-      res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+      // } else {
+      //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+      // }
+    } catch (error) {
+      console.log('error', error);
+      res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
     }
-  } catch (error) {
-    console.log("Lỗi khi tải dữ liệu tài khoản: " + error);
-    res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
+  else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
 });
 //Xoá bàn
 router.delete('/deleteTable', async function (req, res, next) {
@@ -416,11 +445,11 @@ router.delete('/deleteTable', async function (req, res, next) {
   const IDs = req.body.IDs;
   if (await sql.checkSessionAndRole(ss, 'deleteTable')) {
     if (req.body.IDs && req.body.IDs.length > 0) {
-      console.log('IDs', IDs);
+      const IDDoiTac = await sql.getIDDoiTac(ss)
       for (const ID of IDs) {
-        sql.deleteTable(ID)
+        sql.deleteTable(IDDoiTac, ID)
           .catch(error => {
-            console.log("Lỗi khi cập nhật dữ liệu: " + error);
+            console.log('error', error);
             res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
           });
       }
@@ -438,14 +467,15 @@ router.post('/insertTable', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'insertTable')) {
     if (req.body.TenBan && req.body.TrangThai && req.body.IDKhuVuc) {
-      sql.insertTable(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.insertTable(IDDoiTac, data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Thêm Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
-          console.log("Lỗi khi thêm dữ liệu: " + error);
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -459,14 +489,15 @@ router.put('/updateTable', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'updateTable')) {
     if (req.body.IDBan && req.body.TenBan && req.body.TrangThai && req.body.IDKhuVuc) {
-      sql.updateTable(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.updateTable(IDDoiTac, data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Sửa Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
-          console.log("Lỗi khi cập nhật tài khoản: " + error);
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
