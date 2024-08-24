@@ -27,20 +27,20 @@ router.get("/BangDieuKhien", function (req, res, next) {
   res.render("index", { title: "Trang BangDieuKhien" });
 });
 
-/*  Quản lý bàn và khu vực */
 // Lấy số bàn đang có khách
 router.get("/getOccupiedTables", async function (req, res, next) {
   //xử lý dữ liệu vào
   const ss = req.headers.ss;
   try {
     if (await sql.checkSessionAndRole(ss, 'getDashboard')) {
-      let result = await sql.getOccupiedTables();
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      let result = await sql.getOccupiedTables(IDDoiTac);
       res.status(200).json(result)
     } else {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log("Lỗi: " + error);
+    console.log("error" + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -50,13 +50,14 @@ router.get("/getInvoiceToday", async function (req, res, next) {
   const ss = req.headers.ss;
   try {
     if (await sql.checkSessionAndRole(ss, 'getDashboard')) {
-      let result = await sql.getInvoiceToday();
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      let result = await sql.getInvoiceToday(IDDoiTac);
       res.status(200).json(result)
     } else {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log("Lỗi: " + error);
+    console.log("error" + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -66,13 +67,14 @@ router.get("/getRevenueToday", async function (req, res, next) {
   const ss = req.headers.ss;
   try {
     if (await sql.checkSessionAndRole(ss, 'getDashboard')) {
-      let result = await sql.getRevenueToday();
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      let result = await sql.getRevenueToday(IDDoiTac);
       res.status(200).json(result)
     } else {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log("Lỗi: " + error);
+    console.log("error" + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -82,13 +84,14 @@ router.get("/getRevenueMonth", async function (req, res, next) {
   const ss = req.headers.ss;
   try {
     if (await sql.checkSessionAndRole(ss, 'getDashboard')) {
-      let result = await sql.getRevenueMonth();
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      let result = await sql.getRevenueMonth(IDDoiTac);
       res.status(200).json(result)
     } else {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log("Lỗi: " + error);
+    console.log("error" + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -98,13 +101,14 @@ router.get("/getListRevenueMonth", async function (req, res, next) {
   const ss = req.headers.ss;
   try {
     if (await sql.checkSessionAndRole(ss, 'getDashboard')) {
-      let result = await sql.getListRevenueMonth();
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      let result = await sql.getListRevenueMonth(IDDoiTac);
       res.status(200).json(result)
     } else {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log("Lỗi: " + error);
+    console.log("error" + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });

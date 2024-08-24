@@ -64,7 +64,8 @@ let pool;
 async function connect() {
   pool = new sql.ConnectionPool(config);
   await pool.connect();
-  console.log('Đã kết nối tới Cơ Sở Dữ Liệu');
+  //console.log('\x1b[42m Nhớ xoá dữ liệu DaXoa = 1 trong các bảng phụ như Chi tiết định mức \x1b[0m')
+  console.log('\x1b[32m Đã kết nối tới Cơ Sở Dữ Liệu __________________________________________________________________________________________\x1b[0m');
 }
 
 connect();

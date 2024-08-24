@@ -54,7 +54,8 @@ router.get("/getShifts", async function (req, res, next) {
   const endIndex = startIndex + itemsPerPage;
   try {
     if (await sql.checkSessionAndRole(ss, 'getShifts')) {
-      let result = await sql.getShifts();
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      let result = await sql.getShifts(IDDoiTac);
       //kiểm tra chức năng lấy 1 
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
         const filteredData = result.filter((row) => {
@@ -178,6 +179,7 @@ router.get("/getShifts", async function (req, res, next) {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
+    console.log('error', error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -187,9 +189,11 @@ router.delete('/deleteShifts', async function (req, res, next) {
   const IDs = req.body.IDs;
   if (await sql.checkSessionAndRole(ss, 'deleteShifts')) {
     if (req.body.IDs && req.body.IDs.length > 0) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
       for (const ID of IDs) {
-        sql.deleteShifts(ID)
+        sql.deleteShifts(IDDoiTac, ID)
           .catch(error => {
+            console.log('error', error);
             res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
           });
       }
@@ -207,13 +211,15 @@ router.post('/insertShifts', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'insertShifts')) {
     if (req.body.TenCaLamViec && req.body.GioBatDau && req.body.GioKetThuc) {
-      sql.insertShifts(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.insertShifts(IDDoiTac, data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Thêm Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -227,13 +233,15 @@ router.put('/updateShifts', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'updateShifts')) {
     if (req.body.IDCaLamViec && req.body.TenCaLamViec && req.body.GioBatDau && req.body.GioKetThuc) {
-      sql.updateShifts(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.updateShifts(IDDoiTac, data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Sửa Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -269,7 +277,8 @@ router.get("/getCloseShifts", async function (req, res, next) {
   const endIndex = startIndex + itemsPerPage;
   try {
     if (await sql.checkSessionAndRole(ss, 'getCloseShifts')) {
-      let result = await sql.getCloseShifts();
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      let result = await sql.getCloseShifts(IDDoiTac);
       result.forEach(item => {
         const date = new Date(item.NgayLamViec);
         // Format date
@@ -371,7 +380,7 @@ router.get("/getCloseShifts", async function (req, res, next) {
           else if (sortBy === 'NgayLamViec') {
             return compareDate(a.NgayLamViec, b.NgayLamViec, sortOrder);
           }
-           else {//cột không có tiếng Việt (chỉ có số và chữ tiếng Anh)
+          else {//cột không có tiếng Việt (chỉ có số và chữ tiếng Anh)
             if (a[sortBy] === null && b[sortBy] === null) {
               return 0;
             }
@@ -396,7 +405,9 @@ router.get("/getCloseShifts", async function (req, res, next) {
           itemsPerPage = result.length
         }
         const date = new Date();
-        const formattedDate = date.toLocaleDateString();
+        const formattedDate = (`0${date.getDate()}`).slice(-2) + '/' +
+          (`0${date.getMonth() + 1}`).slice(-2) + '/' +
+          date.getFullYear();
         res.status(200).json({
           currentPage,//trang hiện tại
           itemsPerPage,//số hàng trên trang
@@ -413,7 +424,7 @@ router.get("/getCloseShifts", async function (req, res, next) {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log('err',error);
+    console.log('error', error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -425,17 +436,22 @@ router.get("/getMatchShifts", async function (req, res, next) {
   const formattedDate = date.toLocaleDateString();
   try {
     if (await sql.checkSessionAndRole(ss, 'insertCloseShifts')) {
-      sql.getMatchShifts()
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.getMatchShifts(IDDoiTac)
         .then(result => {
           if (result.success) {
+            console.log('result.shiftArray',result.shiftArray);
             res.status(200).json({ MatchShifts: result.shiftArray, DateCurrent: formattedDate });
           }
         })
         .catch(error => {
+          console.log('error',error);
+          
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     }
   } catch (error) {
+    console.log('error', error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 })
@@ -445,8 +461,15 @@ router.post('/insertCloseShifts', async function (req, res, next) {
   const ss = req.headers.ss;
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'insertCloseShifts')) {
-    if (req.body.IDCaLamViec && req.body.IDNhanVien && req.body.NgayLamViec && req.body.TienDauCa && req.body.TienChotCa && typeof req.body.XacNhanNhanCa === 'boolean' && typeof req.body.XacNhanGiaoCa === 'boolean') {
-      sql.insertCloseShifts(data)
+    if (req.body.IDCaLamViec &&
+      req.body.IDNhanVien &&
+      req.body.NgayLamViec &&
+      req.body.TienDauCa &&
+      req.body.TienChotCa &&
+      typeof req.body.XacNhanNhanCa === 'boolean' &&
+      typeof req.body.XacNhanGiaoCa === 'boolean') {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.insertCloseShifts(IDDoiTac, data)
         .then(result => {
           if (result.success) {
             sql.logout(ss)
@@ -461,6 +484,7 @@ router.post('/insertCloseShifts', async function (req, res, next) {
           }
         })
         .catch(error => {
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -475,8 +499,16 @@ router.put('/updateCloseShifts', async function (req, res, next) {
   const data = req.body;
   console.log(data);
   if (await sql.checkSessionAndRole(ss, 'updateCloseShifts')) {
-    if (req.body.IDChotCa && req.body.IDCaLamViec && req.body.IDNhanVien && req.body.NgayLamViec && req.body.TienDauCa && req.body.TienChotCa && typeof req.body.XacNhanNhanCa === 'boolean' && typeof req.body.XacNhanGiaoCa === 'boolean') {
-      sql.updateCloseShifts(data)
+    if (req.body.IDChotCa
+      && req.body.IDCaLamViec
+      && req.body.IDNhanVien
+      && req.body.NgayLamViec
+      && req.body.TienDauCa
+      && req.body.TienChotCa
+      && typeof req.body.XacNhanNhanCa === 'boolean'
+      && typeof req.body.XacNhanGiaoCa === 'boolean') {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.updateCloseShifts(IDDoiTac, data)
         .then(result => {
           if (result.success) {
             sql.logout(ss)
@@ -491,6 +523,7 @@ router.put('/updateCloseShifts', async function (req, res, next) {
           }
         })
         .catch(error => {
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -505,9 +538,11 @@ router.delete('/deleteCloseShifts', async function (req, res, next) {
   const IDs = req.body.IDs;
   if (await sql.checkSessionAndRole(ss, 'deleteCloseShifts')) {
     if (req.body.IDs && req.body.IDs.length > 0) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
       for (const ID of IDs) {
-        sql.deleteCloseShifts(ID)
+        sql.deleteCloseShifts(IDDoiTac,ID)
           .catch(error => {
+            console.log('error', error);
             res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
           });
       }
