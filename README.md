@@ -11,8 +11,11 @@
 - Tạo QR cho bàn ăn (cho phép khách hàng tự gọi món cho bàn ăn của mình)
 ## Chức năng 
 ### Hệ thống
+- Đăng ký
 - Đăng nhập
+- Xác thực email
 - Phân quyền
+- Đổi mật khẩu
 - Kiểm tra phiên đăng nhập
 ### Nhân Viên
 - Hiển thị nhân viên
