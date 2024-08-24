@@ -54,12 +54,13 @@ router.get("/getUnit", async function (req, res, next) {
   const endIndex = startIndex + itemsPerPage;
   try {
     if (await sql.checkSessionAndRole(ss, 'getUnit')) {
-      let result = await sql.getUnit();
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      let result = await sql.getUnit(IDDoiTac);
       //kiểm tra chức năng lấy 1 
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
         const resultFilter = result.filter(item => item.IDDonViTinh == req.query.id);
         //lấy danh sách chuyển đổi đơn vị tính
-        const resultGetList = await sql.getListUnitConversionsByIDUnit(req.query.id);
+        const resultGetList = await sql.getListUnitConversionsByIDUnit(IDDoiTac, req.query.id);
         const updatedResult = resultGetList.map(item => {
           return {
             ...item,
@@ -183,6 +184,7 @@ router.get("/getUnit", async function (req, res, next) {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
+    console.log('error', error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -192,9 +194,11 @@ router.delete('/deleteUnit', async function (req, res, next) {
   const IDs = req.body.IDs;
   if (await sql.checkSessionAndRole(ss, 'deleteUnit')) {
     if (req.body.IDs && req.body.IDs.length > 0) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
       for (const ID of IDs) {
-        sql.deleteUnit(ID)
+        sql.deleteUnit(IDDoiTac, ID)
           .catch(error => {
+            console.log('error', error);
             res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
           });
       }
@@ -212,7 +216,8 @@ router.post('/insertUnit', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'insertUnit')) {
     if (req.body.TenDonViTinh) {
-      sql.insertUnit(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.insertUnit(IDDoiTac, data)
         .then(() => {
           res.status(200).json({ success: true, message: "Thêm Dữ Liệu Thành Công!" });
         })
@@ -231,13 +236,15 @@ router.put('/updateUnit', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'updateUnit')) {
     if (req.body.IDDonViTinh && req.body.TenDonViTinh) {
-      sql.updateUnit(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.updateUnit(IDDoiTac, data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Sửa Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -273,7 +280,8 @@ router.get('/getReceipt', async function (req, res, next) {
   const endIndex = startIndex + itemsPerPage;
   try {
     if (await sql.checkSessionAndRole(ss, 'getReceipt')) {
-      let result = await sql.getReceipt();
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      let result = await sql.getReceipt(IDDoiTac);
       result.forEach(item => {
         const date = new Date(item.NgayNhap);
         // Format date
@@ -288,18 +296,17 @@ router.get('/getReceipt', async function (req, res, next) {
         const filteredData = result.filter(item => item.IDPhieuNhap == req.query.id);
         if (filteredData[0].NhapNguyenLieu) {
           //lấy danh sách nguyên liệu dựa vào IDPhieuNhap
-          let resultGetListIngredientByIDReceipt = await sql.getListIngredientByIDReceipt(req.query.id);
+          let resultGetListIngredientByIDReceipt = await sql.getListIngredientByIDReceipt(IDDoiTac, req.query.id);
           // Xử lý lấy IDDonViTinh và lấy danh sách chuyển đổi DonViTinh
           for (let ingredient of resultGetListIngredientByIDReceipt) {
-            const resultGetUnitByID = await sql.getUnitByID(ingredient.IDNguyenLieu,1)
+            const resultGetUnitByID = await sql.getUnitByID(IDDoiTac, ingredient.IDNguyenLieu, 1)
+            console.log('resultGetUnitByID',resultGetUnitByID);
             const unitConversions = [
               {
-                IDDonViMoi: resultGetUnitByID.IDDonViTinh, 
+                IDDonViMoi: resultGetUnitByID.IDDonViTinh,
                 TenDonViTinh: resultGetUnitByID.TenDonViTinh
               },
-              ...(await sql.getListUnitConversionsByIDUnit(
-                resultGetUnitByID.IDDonViTinh
-              ))
+              ...(await sql.getListUnitConversionsByIDUnit(IDDoiTac, resultGetUnitByID.IDDonViTinh))
             ];
             ingredient.DanhSachCombo = unitConversions;
           }
@@ -309,19 +316,17 @@ router.get('/getReceipt', async function (req, res, next) {
           };
           res.status(200).json(newFilteredData)
         } else {
-          let resultGetListProductByIDReceipt = await sql.getListProductByIDReceipt(req.query.id);
+          let resultGetListProductByIDReceipt = await sql.getListProductByIDReceipt(IDDoiTac, req.query.id);
           for (let product of resultGetListProductByIDReceipt) {
-            const resultGetUnitByID = await sql.getUnitByID(product.IDSanPham,0)
+            const resultGetUnitByID = await sql.getUnitByID(IDDoiTac, product.IDSanPham, 0)
             const unitConversions = [
               {
-                IDDonViMoi: resultGetUnitByID.IDDonViTinh, 
+                IDDonViMoi: resultGetUnitByID.IDDonViTinh,
                 TenDonViTinh: resultGetUnitByID.TenDonViTinh
               },
-              ...(await sql.getListUnitConversionsByIDUnit(
-                resultGetUnitByID.IDDonViTinh
-              ))
+              ...(await sql.getListUnitConversionsByIDUnit(IDDoiTac, resultGetUnitByID.IDDonViTinh))
             ];
-              product.DanhSachCombo = unitConversions;
+            product.DanhSachCombo = unitConversions;
           }
           const newFilteredData = {
             ...filteredData[0],
@@ -413,7 +418,7 @@ router.get('/getReceipt', async function (req, res, next) {
             }
             const comparison = valA.localeCompare(valB, 'vi', { sensitivity: 'base' });
             return sortOrder === 'asc' ? comparison : -comparison;
-          } 
+          }
           else if (sortBy === 'NgayNhap') {
             return compareDate(a.NgayNhap, b.NgayNhap, sortOrder);
           }
@@ -462,7 +467,7 @@ router.get('/getReceipt', async function (req, res, next) {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log('error',error);
+    console.log('error', error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -473,8 +478,10 @@ router.delete('/deleteReceipt', async function (req, res, next) {
   if (await sql.checkSessionAndRole(ss, 'deleteReceipt')) {
     if (req.body.IDs && req.body.IDs.length > 0) {
       for (const ID of IDs) {
-        await sql.deleteReceipt(ID)
+        const IDDoiTac = await sql.getIDDoiTac(ss)
+        await sql.deleteReceipt(IDDoiTac, ID)
           .catch(error => {
+            console.log('error', error);
             res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
           });
       }
@@ -493,13 +500,13 @@ router.post('/insertReceipt', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'insertReceipt')) {
     if (req.body.IDNhanVien && req.body.NgayNhap && req.body.DanhSach.length > 0) {
-      sql.insertReceipt(data)
-
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.insertReceipt(IDDoiTac, data)
         .then(() => {
           res.status(200).json({ success: true, message: "Thêm Dữ Liệu Thành Công!" });
         })
         .catch(error => {
-          console.log('error',error);
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -514,14 +521,15 @@ router.put('/updateReceipt', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'updateReceipt')) {
     if (req.body.IDPhieuNhap && req.body.IDNhanVien && req.body.NgayNhap && req.body.DanhSach.length > 0) {
-      sql.updateReceipt(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.updateReceipt(IDDoiTac, data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Sửa Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
-          // console.log('error', error);
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -531,17 +539,19 @@ router.put('/updateReceipt', async function (req, res, next) {
 });
 // Lấy danh sách chuyển đổi đơn vị tính theo ID IDDonViTinh
 router.get("/getListUnitConversionsByIDUnit", async function (req, res, next) {
+  const iddoitac = req.headers.iddoitac;
   try {
-    if (req.query.IDDonViTinh) {
-      let result = await sql.getListUnitConversionsByIDUnit(req.query.IDDonViTinh);
+    if (req.query.IDDonViTinh && req.headers.iddoitac) {
+      let result = await sql.getListUnitConversionsByIDUnit(iddoitac, req.query.IDDonViTinh);
       let newResult = [{
-        IDDonViMoi:Number(req.query.IDDonViTinh),
-        TenDonViTinh:req.query.TenDonViTinh
-      },...result
-    ]
+        IDDonViMoi: Number(req.query.IDDonViTinh),
+        TenDonViTinh: req.query.TenDonViTinh
+      }, ...result
+      ]
       res.status(200).json(newResult)
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
   } catch (error) {
+    console.log('error', error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -573,7 +583,8 @@ router.get("/getIngredient", async function (req, res, next) {
   const endIndex = startIndex + itemsPerPage;
   try {
     if (await sql.checkSessionAndRole(ss, 'getIngredient')) {
-      let result = await sql.getIngredient();
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      let result = await sql.getIngredient(IDDoiTac);
       //kiểm tra chức năng lấy 1 
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
         const filteredData = result.filter((row) => {
@@ -701,6 +712,7 @@ router.get("/getIngredient", async function (req, res, next) {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
+    console.log('error', error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -710,9 +722,11 @@ router.delete('/deleteIngredient', async function (req, res, next) {
   const IDs = req.body.IDs;
   if (await sql.checkSessionAndRole(ss, 'deleteIngredient')) {
     if (req.body.IDs && req.body.IDs.length > 0) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
       for (const ID of IDs) {
-        sql.deleteIngredient(ID)
+        sql.deleteIngredient(IDDoiTac, ID)
           .catch(error => {
+            console.log('error', error);
             res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
           });
       }
@@ -730,13 +744,15 @@ router.post('/insertIngredient', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'insertIngredient')) {
     if (req.body.TenNguyenLieu && req.body.IDDonViTinh) {
-      sql.insertIngredient(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.insertIngredient(IDDoiTac, data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Thêm Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -750,13 +766,15 @@ router.put('/updateIngredient', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'updateIngredient')) {
     if (req.body.IDNguyenLieu && req.body.TenNguyenLieu && req.body.IDDonViTinh) {
-      sql.updateIngredient(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.updateIngredient(IDDoiTac,data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Sửa Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
+          console.log('error', error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });

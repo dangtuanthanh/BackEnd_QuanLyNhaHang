@@ -56,7 +56,8 @@ router.get("/getListProductsByStatus", async function (req, res, next) {
         status2 = req.query.status2;
       }
       if (req.query.status) {
-        let result = await sql.getListProductsByStatus(req.query.status, status2);
+        const IDDoiTac = await sql.getIDDoiTac(ss)
+        let result = await sql.getListProductsByStatus(IDDoiTac,req.query.status, status2);
         //xử lý nếu trong sản phẩm có số lượng tăng lên thì chỉ báo bếp số lượng tăng đó
         result.forEach(item => {
           if (item.SoLuongTang != null) {
@@ -186,7 +187,6 @@ router.put('/updateStatusProduct', async function (req, res, next) {
   const ss = req.headers.ss;
   if (await sql.checkSessionAndRole(ss, 'updateStatusProduct')) {
     if (req.body.IDHoaDon && req.body.IDSanPham && req.body.IDTrangThai) {
-
       var data = {
         IDHoaDon: req.body.IDHoaDon,
         IDSanPham: req.body.IDSanPham,
@@ -195,7 +195,8 @@ router.put('/updateStatusProduct', async function (req, res, next) {
         SoLuong:req.body.SoLuong,
         huychebien:req.body.huychebien
       };
-      sql.updateStatusProduct(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.updateStatusProduct(IDDoiTac,data)
         .then(() => {
           res.status(200).json({ success: true, message: "Cập Nhật Thành Công!" });
         })

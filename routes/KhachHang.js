@@ -54,7 +54,8 @@ router.get("/getCustomer", async function (req, res, next) {
   const endIndex = startIndex + itemsPerPage;
   try {
     if (await sql.checkSessionAndRole(ss, 'getCustomer')) {
-      let result = await sql.getCustomer();
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      let result = await sql.getCustomer(IDDoiTac);
       //kiểm tra chức năng lấy 1 
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
         const filteredData = result.filter((row) => {
@@ -179,7 +180,7 @@ router.get("/getCustomer", async function (req, res, next) {
       res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
     }
   } catch (error) {
-    console.log("Lỗi khi tải dữ liệu tài khoản: " + error);
+    console.log("error" + error);
     res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
 });
@@ -189,9 +190,11 @@ router.delete('/deleteCustomer', async function (req, res, next) {
   const IDs = req.body.IDs;
   if (await sql.checkSessionAndRole(ss, 'deleteCustomer')) {
     if (req.body.IDs && req.body.IDs.length > 0) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
       for (const ID of IDs) {
-        sql.deleteCustomer(ID)
+        sql.deleteCustomer(IDDoiTac,ID)
           .catch(error => {
+            console.log("error" + error);
             res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
           });
       }
@@ -209,14 +212,15 @@ router.post('/insertCustomer', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'insertCustomer')) {
     if (req.body.TenKhachHang && req.body.SoDienThoai) {
-      sql.insertCustomer(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.insertCustomer(IDDoiTac,data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Thêm Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
-          console.log("Lỗi khi thêm dữ liệu: " + error);
+          console.log("error" + error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
@@ -230,14 +234,15 @@ router.put('/updateCustomer', async function (req, res, next) {
   const data = req.body;
   if (await sql.checkSessionAndRole(ss, 'updateCustomer')) {
     if (req.body.TenKhachHang && req.body.SoDienThoai && req.body.IDKhachHang) {
-      sql.updateCustomer(data)
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.updateCustomer(IDDoiTac,data)
         .then(result => {
           if (result.success) {
             res.status(200).json({ success: true, message: "Sửa Dữ Liệu Thành Công!" });
           }
         })
         .catch(error => {
-          console.log("Lỗi khi cập nhật tài khoản: " + error);
+          console.log("error" + error);
           res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
         });
     } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });

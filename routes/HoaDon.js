@@ -31,29 +31,31 @@ router.get("/HoaDon", function (req, res, next) {
 router.get("/getInvoice", async function (req, res, next) {
   //xử lý dữ liệu vào
   const ss = req.headers.ss;
-  const currentPage = parseInt(req.query.page) || 1;//trang hiện tại
-  var itemsPerPage = parseInt(req.query.limit) || 10;//số hàng trên mỗi trang
-  var sortBy = "IDHoaDon"//giá trị mặc định cho cột sắp xếp
-  var sortOrder = "asc"//giá trị mặc định cho thứ tự sắp xếp
-  var searchExact = false//giá trị mặc định cho chế độ sắp xếp
-  if (typeof req.query.sortBy !== 'undefined') {
-    sortBy = req.query.sortBy
-  }
-  if (typeof req.query.sortOrder !== 'undefined') {
-    sortOrder = req.query.sortOrder
-  }
-  if (typeof req.query.searchExact !== 'undefined') {
-    if (req.query.searchExact === 'true') searchExact = true;
-    else searchExact = false
+  const iddoitac = req.headers.iddoitac;
+  if (req.headers.iddoitac) {
+    const currentPage = parseInt(req.query.page) || 1;//trang hiện tại
+    var itemsPerPage = parseInt(req.query.limit) || 10;//số hàng trên mỗi trang
+    var sortBy = "IDHoaDon"//giá trị mặc định cho cột sắp xếp
+    var sortOrder = "asc"//giá trị mặc định cho thứ tự sắp xếp
+    var searchExact = false//giá trị mặc định cho chế độ sắp xếp
+    if (typeof req.query.sortBy !== 'undefined') {
+      sortBy = req.query.sortBy
+    }
+    if (typeof req.query.sortOrder !== 'undefined') {
+      sortOrder = req.query.sortOrder
+    }
+    if (typeof req.query.searchExact !== 'undefined') {
+      if (req.query.searchExact === 'true') searchExact = true;
+      else searchExact = false
 
-  }
-  //xử lý yêu cầu
-  // Tính toán vị trí bắt đầu và kết thúc của mục trên trang hiện tại
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  try {
-    if (await sql.checkSessionAndRole(ss, 'getInvoice')) {
-      let result = await sql.getInvoice();
+    }
+    //xử lý yêu cầu
+    // Tính toán vị trí bắt đầu và kết thúc của mục trên trang hiện tại
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    try {
+      // if (await sql.checkSessionAndRole(ss, 'getInvoice')) {
+      let result = await sql.getInvoice(iddoitac);
       //xử lý định dạng ngày về dd/mm/yyyy
       result = result.map(item => {
         const date = new Date(item.NgayLapHoaDon);
@@ -67,7 +69,7 @@ router.get("/getInvoice", async function (req, res, next) {
       if (typeof req.query.id !== 'undefined' && !isNaN(req.query.id)) {
         const filteredData = result.filter(item => item.IDHoaDon == req.query.id);
         //lấy danh sách chi tiết hoá đơn theo ID
-        const resultListInvoiceDetailsByID = await sql.getListInvoiceDetailsByID(req.query.id);
+        const resultListInvoiceDetailsByID = await sql.getListInvoiceDetailsByID(iddoitac, req.query.id);
         const newFilteredData = {
           ...filteredData[0],
           DanhSach: resultListInvoiceDetailsByID
@@ -200,186 +202,191 @@ router.get("/getInvoice", async function (req, res, next) {
           DateCurrent: formattedDate,
         });
       }
-    } else {
-      res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+      // } else {
+      //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+      // }
+    } catch (error) {
+      console.log('error', error);
+      res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
     }
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
   }
+  else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác!" });
 });
 
 // Thêm hoá đơn
 router.post('/insertInvoice', async function (req, res, next) {
   const ss = req.headers.ss;
-  if (await sql.checkSessionAndRole(ss, 'insertInvoice')) {
-    if (req.body.IDNhanVien && req.body.DanhSach.length > 0) {
-      //kiểm tra có ghi chú hay không
-      var ghiChu = null;
-      if (req.body.GhiChu || req.body.GhiChu !== '') {
-        ghiChu = req.body.GhiChu;
-      }
-      //kiểm tra có IDBan hay không
-      var IDBan = null;
-      if (req.body.IDBan || req.body.IDBan !== '') {
-        IDBan = req.body.IDBan;
-      }
-      //kiểm tra có Khách Hàng hay không
-      var IDKhachHang = null;
-      if (req.body.IDKhachHang || req.body.IDKhachHang !== '') {
-        IDKhachHang = req.body.IDKhachHang;
-      }
-      //kiểm tra có tên khu vực hay không
-      var TenKhuVuc = null;
-      if (req.body.TenKhuVuc || req.body.TenKhuVuc !== '') {
-        TenKhuVuc = req.body.TenKhuVuc;
-      }
-      //kiểm tra có giảm giá hay không
-      var GiamGia = null;
-      if (req.body.GiamGia || req.body.GiamGia !== '') {
-        GiamGia = req.body.GiamGia;
-      }
-      //kiểm tra có phương thức giảm giá hay không
-      var PhuongThucGiamGia = null;
-      if (req.body.PhuongThucGiamGia || req.body.PhuongThucGiamGia !== '') {
-        PhuongThucGiamGia = req.body.PhuongThucGiamGia;
-      }
-      //kiểm tra có trạng thái thanh toán hay không
-      var TrangThaiThanhToan = false;
-      if (req.body.TrangThaiThanhToan) {
-        TrangThaiThanhToan = req.body.TrangThaiThanhToan;
-      }
-      //kiểm tra có phương thức thanh toán hay không
-      var ThanhToanChuyenKhoan = null;
-      if (req.body.ThanhToanChuyenKhoan === true || req.body.ThanhToanChuyenKhoan === false) {
-        ThanhToanChuyenKhoan = req.body.ThanhToanChuyenKhoan;
-      }
-      var SuDungDiemKhachHang = null;
-      if (req.body.SuDungDiemKhachHang === true) {
-        SuDungDiemKhachHang = req.body.SuDungDiemKhachHang;
-      }
-      var DiemKhachHang = null;
-      if (req.body.DiemKhachHang) {
-        DiemKhachHang = req.body.DiemKhachHang;
-      }
-      //lấy ngày giờ hôm nay để thêm vào NgayLapHoaDon
-      const date = new Date();
-      const datetime = date.toISOString();
-      var data = {
-        IDBan: IDBan,
-        IDNhanVien: req.body.IDNhanVien,
-        IDKhachHang: IDKhachHang,
-        TenKhuVuc: TenKhuVuc,
-        NgayLapHoaDon: datetime,
-        ghiChu: ghiChu,
-        GiamGia: GiamGia,
-        PhuongThucGiamGia: PhuongThucGiamGia,
-        DanhSach: req.body.DanhSach,
-        TrangThaiThanhToan: TrangThaiThanhToan,
-        ThanhToanChuyenKhoan: ThanhToanChuyenKhoan,
-        SuDungDiemKhachHang: SuDungDiemKhachHang,
-        DiemKhachHang: DiemKhachHang
-      };
+  const iddoitac = req.headers.iddoitac;
+  // if (await sql.checkSessionAndRole(ss, 'insertInvoice')) {
+  if (req.body.IDNhanVien && req.body.DanhSach.length > 0 && req.headers.iddoitac) {
+    //kiểm tra có ghi chú hay không
+    var ghiChu = null;
+    if (req.body.GhiChu || req.body.GhiChu !== '') {
+      ghiChu = req.body.GhiChu;
+    }
+    //kiểm tra có IDBan hay không
+    var IDBan = null;
+    if (req.body.IDBan || req.body.IDBan !== '') {
+      IDBan = req.body.IDBan;
+    }
+    //kiểm tra có Khách Hàng hay không
+    var IDKhachHang = null;
+    if (req.body.IDKhachHang || req.body.IDKhachHang !== '') {
+      IDKhachHang = req.body.IDKhachHang;
+    }
+    //kiểm tra có tên khu vực hay không
+    var TenKhuVuc = null;
+    if (req.body.TenKhuVuc || req.body.TenKhuVuc !== '') {
+      TenKhuVuc = req.body.TenKhuVuc;
+    }
+    //kiểm tra có giảm giá hay không
+    var GiamGia = null;
+    if (req.body.GiamGia || req.body.GiamGia !== '') {
+      GiamGia = req.body.GiamGia;
+    }
+    //kiểm tra có phương thức giảm giá hay không
+    var PhuongThucGiamGia = null;
+    if (req.body.PhuongThucGiamGia || req.body.PhuongThucGiamGia !== '') {
+      PhuongThucGiamGia = req.body.PhuongThucGiamGia;
+    }
+    //kiểm tra có trạng thái thanh toán hay không
+    var TrangThaiThanhToan = false;
+    if (req.body.TrangThaiThanhToan) {
+      TrangThaiThanhToan = req.body.TrangThaiThanhToan;
+    }
+    //kiểm tra có phương thức thanh toán hay không
+    var ThanhToanChuyenKhoan = null;
+    if (req.body.ThanhToanChuyenKhoan === true || req.body.ThanhToanChuyenKhoan === false) {
+      ThanhToanChuyenKhoan = req.body.ThanhToanChuyenKhoan;
+    }
+    var SuDungDiemKhachHang = null;
+    if (req.body.SuDungDiemKhachHang === true) {
+      SuDungDiemKhachHang = req.body.SuDungDiemKhachHang;
+    }
+    var DiemKhachHang = null;
+    if (req.body.DiemKhachHang) {
+      DiemKhachHang = req.body.DiemKhachHang;
+    }
+    //lấy ngày giờ hôm nay để thêm vào NgayLapHoaDon
+    const date = new Date();
+    const datetime = date.toISOString();
+    var data = {
+      IDBan: IDBan,
+      IDNhanVien: req.body.IDNhanVien,
+      IDKhachHang: IDKhachHang,
+      TenKhuVuc: TenKhuVuc,
+      NgayLapHoaDon: datetime,
+      ghiChu: ghiChu,
+      GiamGia: GiamGia,
+      PhuongThucGiamGia: PhuongThucGiamGia,
+      DanhSach: req.body.DanhSach,
+      TrangThaiThanhToan: TrangThaiThanhToan,
+      ThanhToanChuyenKhoan: ThanhToanChuyenKhoan,
+      SuDungDiemKhachHang: SuDungDiemKhachHang,
+      DiemKhachHang: DiemKhachHang
+    };
 
-      try {
-        const result = await sql.insertInvoice(data)
-        res.status(200).json({ result: result, success: true, message: "Thêm Dữ Liệu Thành Công!" });
-      }
-      catch (error) {
-        console.log("error", error);
-        res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
-      }
-    } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác !" });
-  } else {
-    res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập !" });
-  }
+    try {
+      const result = await sql.insertInvoice(iddoitac, data)
+      res.status(200).json({ result: result, success: true, message: "Thêm Dữ Liệu Thành Công!" });
+    }
+    catch (error) {
+      console.log("error", error);
+      res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
+    }
+  } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác !" });
+  // } else {
+  //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập !" });
+  // }
 });
 //Cập nhật hoá đơn
 router.put('/updateInvoice', async function (req, res, next) {
   const ss = req.headers.ss;
-  if (await sql.checkSessionAndRole(ss, 'updateInvoice')) {
-    if (req.body.IDHoaDon && req.body.IDNhanVien && req.body.DanhSach.length > 0) {
-      //kiểm tra có ghi chú hay không
-      var ghiChu = null;
-      if (req.body.GhiChu || req.body.GhiChu !== '') {
-        ghiChu = req.body.GhiChu;
-      }
-      //kiểm tra có IDBan hay không
-      var IDBan = null;
-      if (req.body.IDBan || req.body.IDBan !== '') {
-        IDBan = req.body.IDBan;
-      }
-      //kiểm tra có Khách Hàng hay không
-      var IDKhachHang = null;
-      if (req.body.IDKhachHang || req.body.IDKhachHang !== '') {
-        IDKhachHang = req.body.IDKhachHang;
-      }
-      //kiểm tra có tên khu vực hay không
-      var TenKhuVuc = null;
-      if (req.body.TenKhuVuc || req.body.TenKhuVuc !== '') {
-        TenKhuVuc = req.body.TenKhuVuc;
-      }
-      //kiểm tra có giảm giá hay không
-      var GiamGia = null;
-      if (req.body.GiamGia || req.body.GiamGia !== '') {
-        GiamGia = req.body.GiamGia;
-      }
-      //kiểm tra có phương thức giảm giá hay không
-      var PhuongThucGiamGia = null;
-      if (req.body.PhuongThucGiamGia || req.body.PhuongThucGiamGia !== '') {
-        PhuongThucGiamGia = req.body.PhuongThucGiamGia;
-      }
-      //kiểm tra có trạng thái thanh toán hay không
-      var TrangThaiThanhToan = false;
-      if (req.body.TrangThaiThanhToan || req.body.TrangThaiThanhToan !== '') {
-        TrangThaiThanhToan = req.body.TrangThaiThanhToan;
-      }
-      //kiểm tra có phương thức thanh toán hay không
-      var ThanhToanChuyenKhoan = null;
-      if (req.body.ThanhToanChuyenKhoan === true || req.body.ThanhToanChuyenKhoan === false) {
-        ThanhToanChuyenKhoan = req.body.ThanhToanChuyenKhoan;
-      }
-      var SuDungDiemKhachHang = null;
-      if (req.body.SuDungDiemKhachHang === true) {
-        SuDungDiemKhachHang = req.body.SuDungDiemKhachHang;
-      }
-      var DiemKhachHang = null;
-      if (req.body.DiemKhachHang) {
-        DiemKhachHang = req.body.DiemKhachHang;
-      }
-      // không cần thiết vì ngày lập ko nên sửa
-      // //lấy ngày giờ hôm nay để thêm vào NgayLapHoaDon
-      // const date = new Date();
-      // const datetime = date.toISOString();
-      var data = {
-        IDHoaDon: req.body.IDHoaDon,
-        IDBan: IDBan,
-        IDNhanVien: req.body.IDNhanVien,
-        IDKhachHang: IDKhachHang,
-        TenKhuVuc: TenKhuVuc,
-        TrangThaiThanhToan: TrangThaiThanhToan,
-        GhiChu: ghiChu,
-        GiamGia: GiamGia,
-        PhuongThucGiamGia: PhuongThucGiamGia,
-        DanhSach: req.body.DanhSach,
-        TrangThaiThanhToan: TrangThaiThanhToan,
-        ThanhToanChuyenKhoan: ThanhToanChuyenKhoan,
-        SuDungDiemKhachHang: SuDungDiemKhachHang,
-        DiemKhachHang: DiemKhachHang
-      };
+  const iddoitac = req.headers.iddoitac;
+  // if (await sql.checkSessionAndRole(ss, 'updateInvoice')) {
+  if (req.body.IDHoaDon && req.body.IDNhanVien && req.body.DanhSach.length > 0 && req.headers.iddoitac) {
+    //kiểm tra có ghi chú hay không
+    var ghiChu = null;
+    if (req.body.GhiChu || req.body.GhiChu !== '') {
+      ghiChu = req.body.GhiChu;
+    }
+    //kiểm tra có IDBan hay không
+    var IDBan = null;
+    if (req.body.IDBan || req.body.IDBan !== '') {
+      IDBan = req.body.IDBan;
+    }
+    //kiểm tra có Khách Hàng hay không
+    var IDKhachHang = null;
+    if (req.body.IDKhachHang || req.body.IDKhachHang !== '') {
+      IDKhachHang = req.body.IDKhachHang;
+    }
+    //kiểm tra có tên khu vực hay không
+    var TenKhuVuc = null;
+    if (req.body.TenKhuVuc || req.body.TenKhuVuc !== '') {
+      TenKhuVuc = req.body.TenKhuVuc;
+    }
+    //kiểm tra có giảm giá hay không
+    var GiamGia = null;
+    if (req.body.GiamGia || req.body.GiamGia !== '') {
+      GiamGia = req.body.GiamGia;
+    }
+    //kiểm tra có phương thức giảm giá hay không
+    var PhuongThucGiamGia = null;
+    if (req.body.PhuongThucGiamGia || req.body.PhuongThucGiamGia !== '') {
+      PhuongThucGiamGia = req.body.PhuongThucGiamGia;
+    }
+    //kiểm tra có trạng thái thanh toán hay không
+    var TrangThaiThanhToan = false;
+    if (req.body.TrangThaiThanhToan || req.body.TrangThaiThanhToan !== '') {
+      TrangThaiThanhToan = req.body.TrangThaiThanhToan;
+    }
+    //kiểm tra có phương thức thanh toán hay không
+    var ThanhToanChuyenKhoan = null;
+    if (req.body.ThanhToanChuyenKhoan === true || req.body.ThanhToanChuyenKhoan === false) {
+      ThanhToanChuyenKhoan = req.body.ThanhToanChuyenKhoan;
+    }
+    var SuDungDiemKhachHang = null;
+    if (req.body.SuDungDiemKhachHang === true) {
+      SuDungDiemKhachHang = req.body.SuDungDiemKhachHang;
+    }
+    var DiemKhachHang = null;
+    if (req.body.DiemKhachHang) {
+      DiemKhachHang = req.body.DiemKhachHang;
+    }
+    // không cần thiết vì ngày lập ko nên sửa
+    // //lấy ngày giờ hôm nay để thêm vào NgayLapHoaDon
+    // const date = new Date();
+    // const datetime = date.toISOString();
+    var data = {
+      IDHoaDon: req.body.IDHoaDon,
+      IDBan: IDBan,
+      IDNhanVien: req.body.IDNhanVien,
+      IDKhachHang: IDKhachHang,
+      TenKhuVuc: TenKhuVuc,
+      TrangThaiThanhToan: TrangThaiThanhToan,
+      GhiChu: ghiChu,
+      GiamGia: GiamGia,
+      PhuongThucGiamGia: PhuongThucGiamGia,
+      DanhSach: req.body.DanhSach,
+      TrangThaiThanhToan: TrangThaiThanhToan,
+      ThanhToanChuyenKhoan: ThanhToanChuyenKhoan,
+      SuDungDiemKhachHang: SuDungDiemKhachHang,
+      DiemKhachHang: DiemKhachHang
+    };
 
 
-      sql.updateInvoice(data)
-        .then(() => {
-          res.status(200).json({ success: true, message: "Sửa Dữ Liệu Thành Công!" });
-        })
-        .catch(error => {
-          console.log("error", error);
-          res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
-        });
-    } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác !" });
-  } else {
-    res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
-  }
+    sql.updateInvoice(iddoitac, data)
+      .then(() => {
+        res.status(200).json({ success: true, message: "Sửa Dữ Liệu Thành Công!" });
+      })
+      .catch(error => {
+        console.log("error", error);
+        res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
+      });
+  } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác !" });
+  // } else {
+  //   res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+  // }
 });
 
 //Xoá hoá đơn
@@ -388,8 +395,9 @@ router.delete('/deleteInvoice', async function (req, res, next) {
   const IDs = req.body.IDs;
   if (await sql.checkSessionAndRole(ss, 'deleteInvoice')) {
     if (req.body.IDs && req.body.IDs.length > 0) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
       for (const ID of IDs) {
-        sql.deleteInvoice(ID)
+        sql.deleteInvoice(IDDoiTac, ID)
           .catch(error => {
             console.log('error', error);
             res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
@@ -408,13 +416,12 @@ router.put('/updateStatusTable', async function (req, res, next) {
   const ss = req.headers.ss;
   if (await sql.checkSessionAndRole(ss, 'updateInvoice')) {
     if (req.body.IDBan && req.body.TrangThai) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
       var data = {
         IDBan: req.body.IDBan,
         TrangThai: req.body.TrangThai
       };
-
-
-      sql.updateStatusTable(data)
+      sql.updateStatusTable(IDDoiTac, data)
         .then(() => {
           res.status(200).json({ success: true, message: "Cập Nhật Dữ Liệu Thành Công!" });
         })
@@ -428,14 +435,16 @@ router.put('/updateStatusTable', async function (req, res, next) {
   }
 });
 router.get("/getPicturePayment", async function (req, res, next) {
-  sql.getPicturePayment()
-    .then(result => {
-      res.status(200).json(result);
-    })
-    .catch(error => {
-      console.log('error', error)
-      res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
-    });
+  if (req.headers.iddoitac) {
+    sql.getPicturePayment(req.headers.iddoitac)
+      .then(result => {
+        res.status(200).json(result);
+      })
+      .catch(error => {
+        console.log('error', error)
+        res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
+      });
+  } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác !" });
 })
 //Cập nhật ảnh qr thanh toán
 const storage = multer.diskStorage({
@@ -451,15 +460,50 @@ const newupload = multer({ storage: storage });
 router.put('/updatePicturePayment', newupload.single('HinhAnh'), async function (req, res, next) {
   const ss = req.headers.ss;
   var HinhAnh = null
-  if (await sql.checkSessionAndRole(ss, 'updatePicturePayment')) {
+  if (await sql.checkSessionAndRole(ss, 'updateSystem')) {
     if (req.file) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
       imagePath = req.file.path
       const domain = req.headers.host;
       const newPath = imagePath ? path.relative('img/AnhThanhToan', imagePath) : null; // Đường dẫn tương đối từ img/NhanVien đến imagePath
       const imagePathWithDomain = `http://${domain}/AnhThanhToan/${newPath}`;
-      HinhAnh = imagePathWithDomain
+      // Sử dụng thư viện sharp để thay đổi kích thước ảnh
+      const sharp = require('sharp');
+      const outputFilePath = path.join('img/AnhThanhToan', 'resized-' + req.file.filename);
 
-      sql.updatePicturePayment(HinhAnh)
+      try {
+        await sharp(imagePath)
+          .resize(540, 540) // Thay đổi kích thước và cắt thành hình vuông
+          .toFile(outputFilePath);
+
+        HinhAnh = `http://${domain}/AnhThanhToan/${path.relative('img/AnhThanhToan', outputFilePath)}`;
+
+        //HinhAnh = imagePathWithDomain
+
+        sql.updatePicturePayment(IDDoiTac, HinhAnh)
+          .then(() => {
+            res.status(200).json({ success: true, message: "Cập Nhật Dữ Liệu Thành Công!" });
+          })
+          .catch(error => {
+            console.log("error", error);
+            res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
+          });
+      } catch (error) {
+        console.log("error", error);
+        res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý ảnh', error: error });
+      }
+    } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác !" });
+  } else {
+    res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+  }
+});
+//Cập nhật phần trăm điểm khách hàng
+router.put('/updatePerPointCustomert', async function (req, res, next) {
+  const ss = req.headers.ss;
+  if (await sql.checkSessionAndRole(ss, 'updateSystem')) {
+    if (req.body.TiLe) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      sql.updatePerPointCustomert(IDDoiTac, req.body.TiLe)
         .then(() => {
           res.status(200).json({ success: true, message: "Cập Nhật Dữ Liệu Thành Công!" });
         })
@@ -472,5 +516,72 @@ router.put('/updatePicturePayment', newupload.single('HinhAnh'), async function 
     res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
   }
 });
+router.get("/getPerPointCustomert", async function (req, res, next) {
+  const ss = req.headers.ss;
+  if (await sql.checkSessionAndRole(ss, 'updateSystem')) {
+    const IDDoiTac = await sql.getIDDoiTac(ss)
+    sql.getPerPointCustomert(IDDoiTac)
+      .then(result => {
+        res.status(200).json(result);
+      })
+      .catch(error => {
+        console.log('error', error)
+        res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
+      });
+  }
+  else {
+    res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+  }
+})
+const uploadLogo = multer({ storage: storage });
+router.put('/updateLogo', uploadLogo.single('HinhAnh'), async function (req, res, next) {
+  const ss = req.headers.ss;
+  var HinhAnh = null
+  if (await sql.checkSessionAndRole(ss, 'updateSystem')) {
+    if (req.file) {
+      const IDDoiTac = await sql.getIDDoiTac(ss)
+      imagePath = req.file.path
+      const domain = req.headers.host;
+      // Sử dụng thư viện sharp để thay đổi kích thước ảnh
+      const sharp = require('sharp');
+      const outputFilePath = path.join('img/Logo', 'resized-' + req.file.filename);
 
+      try {
+        await sharp(imagePath)
+          .resize(150, 76) // Thay đổi kích thước và cắt thành hình vuông
+          .toFile(outputFilePath);
+
+        HinhAnh = `http://${domain}/Logo/${path.relative('img/Logo', outputFilePath)}`;
+
+        //HinhAnh = imagePathWithDomain
+
+        sql.updateLogo(IDDoiTac, HinhAnh)
+          .then(() => {
+            res.status(200).json({ success: true, message: "Cập Nhật Dữ Liệu Thành Công!" });
+          })
+          .catch(error => {
+            console.log("error", error);
+            res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
+          });
+      } catch (error) {
+        console.log("error", error);
+        res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý ảnh', error: error });
+      }
+    } else res.status(400).json({ success: false, message: "Dữ liệu gửi lên không chính xác !" });
+  } else {
+    res.status(401).json({ success: false, message: "Đăng Nhập Đã Hết Hạn Hoặc Bạn Không Có Quyền Truy Cập!" });
+  }
+});
+
+
+// router.get("/checkStatusTable", async function (req, res, next) {
+//   sql.getPerPointCustomert()
+//     .then(result => {
+//       res.status(200).json(result);
+//     })
+//     .catch(error => {
+//       console.log('error', error)
+//       res.status(500).json({ success: false, message: 'Đã xảy ra lỗi trong quá trình xử lý', error: error });
+//     });
+// })
 module.exports = router;

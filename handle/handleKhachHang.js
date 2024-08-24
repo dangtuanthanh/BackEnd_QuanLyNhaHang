@@ -4,10 +4,12 @@ const sql = require('mssql');
 //Kiểm tra phiên và quyền đăng nhập
 async function checkSessionAndRole(ss, permission) {
   try {
+    const NgayHomNay = new Date(new Date().toISOString());
     let result = await pool
       .request()
       .input("MaDangNhap", sql.NVarChar, ss)
-      .query('EXEC loginAndPermission_checkSessionAndRole_getInfoByMaDangNhap @MaDangNhap');
+      .input('NgayHomNay', sql.DateTime,NgayHomNay)
+      .execute('loginAndPermission_checkSessionAndRole_getInfoByMaDangNhap');
     if (result.recordset.length === 0) {
       console.log("Không tìm thấy người dùng với mã đăng nhập:", ss);
       return false;
@@ -26,11 +28,9 @@ async function checkSessionAndRole(ss, permission) {
         const permissions = resultVaiTro.recordset.map((row) => row.TenQuyen);;
         for (const p of permissions) {
           if (p === permission) {
-            console.log('Có quyền truy cập');
             return true; // Nếu tìm thấy quyền khớp với biến permission, trả về true
           }
         }
-        console.log('Không có quyền truy cập');
         return false; // Nếu không tìm thấy quyền nào khớp với biến permission, trả về false
       }
     }
@@ -39,19 +39,34 @@ async function checkSessionAndRole(ss, permission) {
     throw error;
   }
 }
-//xử lý tải danh sách khu vực
-async function getCustomer() {
+//lấy mã IDDoiTac
+async function getIDDoiTac(ss) {
   try {
-    let result = await pool.request().query('EXEC customer_getCustomer_getCustomer');
+    let result = await pool.request()
+      .input("MaDangNhap", sql.NVarChar, ss)
+      .query('EXEC loginAndPermission_checkSessionAndRole_getIDDoiTac @MaDangNhap');
+    return result.recordset[0].IDDoiTac;
+  } catch (error) {
+    console.error("Lỗi khi lấy IDDoiTac", error);
+    throw error;
+  }
+}
+//xử lý tải danh sách khách hàng
+async function getCustomer(IDDoiTac) {
+  try {
+    let result = await pool.request()
+    .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
+    .execute('customer_getCustomer_getCustomer');
     return result.recordset;
   } catch (error) {
     throw error;
   }
 }
-//Hàm xoá khu vực
-async function deleteCustomer(ID) {
+//Hàm xoá khách hàng
+async function deleteCustomer(IDDoiTac,ID) {
   try {
     await pool.request()
+    .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .input('IDKhachHang', sql.Int, ID)
       .execute('customer_deleteCustomer_deleteCustomer');
   } catch (error) {
@@ -59,10 +74,11 @@ async function deleteCustomer(ID) {
   }
 }
 
-//xử lý thêm khu vực
-async function insertCustomer(data) {
+//xử lý thêm khách hàng
+async function insertCustomer(IDDoiTac,data) {
   try {
     await pool.request()
+    .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .input('TenKhachHang', sql.NVarChar, data.TenKhachHang)
       .input('SoDienThoai', sql.VarChar, data.SoDienThoai)
       .execute('customer_insertCustomer_insertCustomer');
@@ -72,10 +88,11 @@ async function insertCustomer(data) {
   }
 }
 
-//xử lý cập nhật khu vực
-async function updateCustomer(data) {
+//xử lý cập nhật khách hàng
+async function updateCustomer(IDDoiTac,data) {
   try {
     await pool.request()
+    .input("IDDoiTac", sql.UniqueIdentifier, IDDoiTac)
       .input('IDKhachHang', sql.Int, data.IDKhachHang)
       .input('TenKhachHang', sql.NVarChar, data.TenKhachHang)
       .input('SoDienThoai', sql.VarChar, data.SoDienThoai)
@@ -87,6 +104,7 @@ async function updateCustomer(data) {
 }
 module.exports = {
   checkSessionAndRole: checkSessionAndRole,
+  getIDDoiTac:getIDDoiTac,
   getCustomer: getCustomer,
   deleteCustomer: deleteCustomer,
   insertCustomer:insertCustomer,
